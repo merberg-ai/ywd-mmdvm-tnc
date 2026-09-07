@@ -32,6 +32,14 @@ class P1ToolingContractTests(unittest.TestCase):
         self.assertIn("KISS_BYTES_SENT=0", text)
         self.assertIn("TX_REQUESTED=NO", text)
 
+    def test_physical_gate_waits_for_kiss_listener_before_operator_prompt(self) -> None:
+        physical = (ROOT / "scripts" / "p1-rx-physical.sh").read_text(encoding="utf-8")
+        gate = (ROOT / "src" / "ywdtnc" / "rx_gate.py").read_text(encoding="utf-8")
+        self.assertIn("--connect-timeout", physical)
+        self.assertNotIn("Transmit ONE normal 1200-baud AX.25 packet", physical)
+        self.assertIn("KISS_CONNECTED=YES", gate)
+        self.assertIn("Transmit ONE normal 1200-baud AX.25 packet", gate)
+
     def test_flasher_never_invokes_option_byte_programming(self) -> None:
         text = (ROOT / "firmware" / "qualified_flash.py").read_text(encoding="utf-8")
         self.assertNotIn('"--option-bytes"', text)

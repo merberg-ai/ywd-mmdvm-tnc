@@ -5,6 +5,7 @@ CONFIG="${YWD_TNC_CONFIG:-/etc/ywd-mmdvm-tnc/config.toml}"
 SERVICE="ywd-mmdvm-tnc.service"
 GATE="/opt/ywd-mmdvm-tnc/venv/bin/ywd-tnc-rx-gate"
 TIMEOUT="${YWD_TNC_P1_RX_TIMEOUT:-120}"
+CONNECT_TIMEOUT="${YWD_TNC_P1_CONNECT_TIMEOUT:-10}"
 
 fail(){ printf '[FAIL] %s\n' "$*" >&2; exit 2; }
 
@@ -51,7 +52,8 @@ echo "RF_FREQUENCY_MHZ=145.050"
 echo "TX_ENABLED=NO"
 echo "KISS_ENDPOINT=127.0.0.1:8001"
 echo "KISS_GATE_WRITES=NO"
-echo "WAIT_LIMIT_SECONDS=$TIMEOUT"
+echo "KISS_READY_WAIT_SECONDS=$CONNECT_TIMEOUT"
+echo "RF_WAIT_LIMIT_SECONDS=$TIMEOUT"
 
 if [[ $was_active -eq 0 ]]; then
   systemctl start "$SERVICE"
@@ -68,14 +70,19 @@ systemctl is-active --quiet "$SERVICE" || {
 
 echo "YWD_TNCD_SERVICE=ACTIVE"
 journalctl -u "$SERVICE" -n 12 --no-pager || true
-printf '\nTransmit ONE normal 1200-baud AX.25 packet on 145.050 MHz now.\n\n'
+printf '\nWaiting for ywd-tncd to finish modem startup and open TCP KISS...\n\n'
 
 set +e
-"$GATE" --host 127.0.0.1 --port 8001 --timeout "$TIMEOUT"
+"$GATE" --host 127.0.0.1 --port 8001 --connect-timeout "$CONNECT_TIMEOUT" --timeout "$TIMEOUT"
 rc=$?
 set -e
 
 if [[ $rc -ne 0 ]]; then
+  if ! systemctl is-active --quiet "$SERVICE"; then
+    echo "YWD_TNCD_SERVICE=FAILED_BEFORE_OR_DURING_GATE" >&2
+  else
+    echo "YWD_TNCD_SERVICE=ACTIVE_AT_GATE_FAILURE" >&2
+  fi
   journalctl -u "$SERVICE" -n 80 --no-pager >&2 || true
   echo "YWD_TNC_P1_PHYSICAL_RX=FAIL:gate_rc=$rc" >&2
   exit "$rc"

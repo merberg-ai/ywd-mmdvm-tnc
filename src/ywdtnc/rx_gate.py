@@ -19,31 +19,76 @@ def _text(data: bytes) -> str:
     return data.decode("utf-8", "backslashreplace")
 
 
+def _connect_with_retry(host: str, port: int, wait_seconds: float):
+    deadline = time.monotonic() + wait_seconds
+    attempts = 0
+    last_error: OSError | None = None
+    while True:
+        attempts += 1
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        try:
+            sock = socket.create_connection((host, port), timeout=min(1.0, remaining))
+            return sock, attempts
+        except OSError as exc:
+            last_error = exc
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            time.sleep(min(0.10, remaining))
+    detail = "unknown error" if last_error is None else str(last_error)
+    raise ConnectionError(f"KISS listener did not become ready within {wait_seconds:g}s: {detail}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="ywd-tnc-rx-gate")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8001)
     parser.add_argument("--timeout", type=float, default=120.0)
+    parser.add_argument(
+        "--connect-timeout",
+        type=float,
+        default=10.0,
+        help="seconds to wait for ywd-tncd to open the KISS listener before the RF receive timer starts",
+    )
     args = parser.parse_args()
 
     if not 1 <= args.port <= 65535:
         parser.error("--port must be 1..65535")
     if args.timeout <= 0:
         parser.error("--timeout must be positive")
+    if args.connect_timeout <= 0:
+        parser.error("--connect-timeout must be positive")
 
-    deadline = time.monotonic() + args.timeout
     decoder = KISSStreamDecoder(max_body_bytes=4096)
 
     print("===== YWD-MMDVM-TNC P1 LIVE RX GATE =====", flush=True)
     print(f"KISS_ENDPOINT={args.host}:{args.port}", flush=True)
-    print(f"WAIT_LIMIT_SECONDS={args.timeout:g}", flush=True)
+    print(f"KISS_READY_WAIT_SECONDS={args.connect_timeout:g}", flush=True)
+    print(f"RF_WAIT_LIMIT_SECONDS={args.timeout:g}", flush=True)
     print("KISS_BYTES_SENT=0", flush=True)
     print("TX_REQUESTED=NO", flush=True)
 
     try:
-        with socket.create_connection((args.host, args.port), timeout=min(args.timeout, 5.0)) as sock:
+        sock, connect_attempts = _connect_with_retry(args.host, args.port, args.connect_timeout)
+    except ConnectionError as exc:
+        print(f"YWD_TNC_P1_LIVE_RX=FAIL:KISS_NOT_READY:{exc}", file=sys.stderr)
+        print("KISS_BYTES_SENT=0")
+        print("TX_REQUESTED=NO")
+        return 20
+
+    deadline = time.monotonic() + args.timeout
+    try:
+        with sock:
             sock.settimeout(1.0)
             print("KISS_CONNECTED=YES", flush=True)
+            print(f"KISS_CONNECT_ATTEMPTS={connect_attempts}", flush=True)
+            print("KISS_BYTES_SENT=0", flush=True)
+            print("TX_REQUESTED=NO", flush=True)
+            print("", flush=True)
+            print("Transmit ONE normal 1200-baud AX.25 packet on 145.050 MHz now.", flush=True)
+            print("", flush=True)
             while time.monotonic() < deadline:
                 try:
                     chunk = sock.recv(4096)
@@ -82,8 +127,8 @@ def main() -> int:
                     print("PHYSICAL_GATE_RF_DIRECTION=RX_ONLY", flush=True)
                     return 0
     except OSError as exc:
-        print(f"YWD_TNC_P1_LIVE_RX=FAIL:KISS_CONNECT:{exc}", file=sys.stderr)
-        return 20
+        print(f"YWD_TNC_P1_LIVE_RX=FAIL:KISS_IO:{exc}", file=sys.stderr)
+        return 23
 
     print("YWD_TNC_P1_LIVE_RX=FAIL:TIMEOUT", file=sys.stderr)
     print("KISS_BYTES_SENT=0")
