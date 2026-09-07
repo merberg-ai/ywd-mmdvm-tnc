@@ -1,4 +1,4 @@
-name: p3-lan-kiss-ci
+name: ywd-mmdvm-tnc-ci
 
 on:
   push:
@@ -29,11 +29,11 @@ jobs:
           python -m pip install --no-deps ./vendor/ywd-1278
           python -m pip install --no-deps -e .
 
-      - name: P3 LAN KISS host contract
-        run: bash scripts/check-p3-lan-kiss.sh
+      - name: Public release host contract
+        run: bash scripts/check-public-polish.sh
 
-      - name: Installed firmware profile CLI is hardware inert
+      - name: Firmware profile remains hardware inert
         run: ywd-tnc-fw --profile firmware/product-ax25r4.json show
 
-      - name: Installed framework self-test is RF inert
+      - name: Framework self-test remains RF inert
         run: ywd-tncd --config config/ywd-mmdvm-tnc.example.toml --framework-self-test

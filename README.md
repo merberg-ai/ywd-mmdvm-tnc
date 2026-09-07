@@ -1,198 +1,253 @@
 # YWD-MMDVM-TNC
 
-**YWD-MMDVM-TNC** is a dedicated 1200-baud AX.25 modem/TNC appliance for Raspberry Pi systems fitted with the qualified MMDVM_HS-style radio HAT. The service executable is **`ywd-tncd`**.
-
-The project deliberately stops at the modem boundary. It does **not** implement a BBS, mailbox, packet node, connected terminal personality, beacon scheduler, forwarding engine, or AX.25 retry state machine. Applications such as LinBPQ/BPQ32 own those layers.
-
-```text
- LinBPQ / BPQ32 / APRS and packet applications
-              |                 |
-         TCP KISS :8001    AGW raw :8000
-              \                 /
-               \               /
-                  ywd-tncd
-                     |
-          AX.25 FCS + Bell-202 modem
-          p-persistence / DCD / TXDELAY
-                     |
-             single UART owner
-                     |
-       qualified YWD AX25R4 firmware
-                     |
-              STM32 + ADF7021
-                     |
-                     RF
-```
-
-Exactly one process owns the HAT UART. KISS and AGW share one RX decoder, one bounded TX admission queue, one channel-access policy, and one half-duplex RF path. Protocol clients receive live RF frames only; reconnecting never replays packet history.
-
-## Development status
-
-**P2 TCP-KISS TX and same-connection RX recovery are physically qualified.** On 2026-09-07, the target Raspberry Pi 5 / MMDVM_HS HAT passed a one-shot transmit qualification at 145.050 MHz / power 200 using exact product commit `c9e1cfe051326643eb16093f79e65fa272d29796`.
-
-The transmitted application frame was exactly:
+**YWD-MMDVM-TNC** turns a supported MMDVM_HS Raspberry Pi HAT into a dedicated
+1200-baud Bell-202 / AX.25 TNC with **TCP KISS** as the primary application
+interface. It is designed to sit underneath packet applications such as
+LinBPQ/BPQ32, APRS software, terminals, and other KISS-capable tools.
 
 ```text
-KJ6YWD-10>YWD127:YWD-MMDVM-TNC P2 1/1
+LinBPQ / BPQ32 / packet applications
+                |
+          TCP KISS :8001
+                |
+          YWD-MMDVM-TNC
+                |
+       AX.25 + Bell-202 + CSMA
+                |
+     qualified MMDVM_HS firmware
+                |
+          STM32 + ADF7021
+                |
+              RF
 ```
 
-An independent over-air receiver decoded that exact UI/PID `0xF0` frame once. Product accounting independently proved one TCP-KISS request, one admission, one queue dispatch and one runtime RF dispatch. After a three-second hold the dispatch count remained exactly one, proving no automatic internal retry.
+The TNC intentionally stops at the modem boundary. Connected-mode AX.25 state,
+acknowledgements, retries, routing, BBS/node features, beacons, and application
+logic belong to the program using KISS. One `ywd-tncd` process owns the HAT UART
+and provides the shared RX/TX modem path.
 
-The same TCP KISS connection then received fresh live RF after TX. The formal return frame decoded as `KJ6YWD>JIM,KRDG,KBANN,KJOHN,KBULN,WOODY` UI/PID `0xF0` with information `yooooooooo hellooooooo`. RX had in fact already resumed before that formal return gate: the harness drained 18 KISS bytes of intervening traffic and its decoded-RX baseline had advanced to one.
+## Current hardware support
 
-Persistent `/etc/ywd-mmdvm-tnc/config.toml` remained TX-disabled and unmodified; P2's TX authority existed only in memory for the qualification process. The full machine-readable record is `qualification/p2-kiss-tx-physical-2026-09-07.json`.
+The physically-qualified target is:
 
-**P1 RX remains physically qualified.** Its full machine-readable record is `qualification/p1-rx-physical-2026-09-07.json`.
+- Raspberry Pi 5
+- MMDVM_HS-style simplex HAT
+- STM32F103 / ADF7021
+- 14.7456 MHz TCXO target profile
+- modem UART `/dev/ttyAMA0`
 
-The physically proven product boundary is now bidirectional:
+The current product TX safety gate permits RF transmit only on the physically
+qualified **145.050 MHz / power-200** profile. RX may be configured separately,
+but users are responsible for choosing frequencies and operating parameters
+that are legal and appropriate for their station and location.
+
+## Quick install
+
+On a fresh Raspberry Pi OS / Debian-family system, the guided installer can be
+started with one command:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/merberg-ai/ywd-mmdvm-tnc/main/install.sh | sudo bash
+```
+
+The installer keeps detailed command output in `/var/log/ywd-mmdvm-tnc/` and
+shows only the current step, progress, warnings, and final result in the
+terminal.
+
+During setup it asks for:
+
+- **KISS access** — local only (`127.0.0.1`) or trusted LAN (`0.0.0.0`)
+- **KISS TCP port** — default `8001`
+- **RF transmit** — default **disabled**
+- **receive frequency** — default `145.050 MHz` when TX is disabled
+- optional local **AGW raw** listener — default disabled
+- whether to back up / verify / install the qualified HAT firmware — default yes
+
+A real firmware write is never silent. Before writing STM32 main flash the tool
+first verifies a golden stock rollback backup and then requires the operator to
+type:
 
 ```text
-TCP KISS -> ywd TNCEngine -> qualified AX25R4 HAT -> 145.050 MHz RF
-145.050 MHz RF -> qualified AX25R4 HAT -> same TNCEngine -> same TCP KISS connection
+WRITE-FIRMWARE-NOW
 ```
 
-## Qualified provenance
+After successful setup the installer enables and starts
+`ywd-mmdvm-tnc.service` and prints the configured KISS endpoint.
 
-The RF-critical modem core remains pinned as `vendor/ywd-1278` at exactly:
+### Testing the development branch
 
-- commit: `c28c46c3478d7931af611923c92cd8f692a00858`
-- source tree: `9c06dea088a30782674404f43d964b8317c128a3`
+Before a release is promoted to `main`, the same bootstrap can be tested from
+`dev` with:
 
-Qualified hardware target:
-
-`mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021`
-
-Qualified AX25R4 runtime identity:
-
-`MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed`
-
-Exact qualified firmware:
-
-- size: `59892` bytes
-- SHA-256: `b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616`
-- flash base: `0x08000000`
-- STM32 bootloader: `0x22`
-- STM32 device ID: `0x0410`
-
-Qualified stock rollback baseline:
-
-- full main-flash size: `131072` bytes
-- SHA-256: `4981b35b2d50ada0b09322d9de19dd58a0cbd49eb005693499d1acae92f9d684`
-
-The firmware binary intentionally keeps its **YWD-1278-AX25R4** runtime identity. That exact identity and binary are already physically qualified. Renaming the firmware string merely for cosmetics would create a different binary and throw away the strongest qualification evidence we have. The new host product, service, paths, scripts, state, commands, and documentation are branded YWD-MMDVM-TNC / `ywd-tncd`.
-
-## Interfaces
-
-### TCP KISS
-
-Primary/native interface, port 0. DATA plus TXDELAY, PERSIST and SLOTTIME are supported. Default listener:
-
-```text
-127.0.0.1:8001
+```bash
+curl -fsSL https://raw.githubusercontent.com/merberg-ai/ywd-mmdvm-tnc/dev/install.sh | sudo env YWD_TNC_REF=dev bash
 ```
 
-### AGW raw
+## Manual installation from Git
 
-Initial AGW support is deliberately raw-mode only. Implemented wire behavior includes the standard 36-byte AGW header, lowercase `k` raw-monitor subscription and uppercase `K` raw AX.25 receive/transmit. Default listener:
-
-```text
-127.0.0.1:8000
+```bash
+git clone --recursive https://github.com/merberg-ai/ywd-mmdvm-tnc.git
+cd ywd-mmdvm-tnc
+sudo ./installer/setup.sh
 ```
 
-KISS and AGW have no transport authentication. The config accepts loopback or an explicit private IPv4 address and rejects wildcard/public binds.
-
-## Clone
-
-Clone recursively so the exact qualified core is present:
+For development:
 
 ```bash
 git clone --recursive -b dev https://github.com/merberg-ai/ywd-mmdvm-tnc.git
 cd ywd-mmdvm-tnc
+sudo ./installer/setup.sh
 ```
 
-For an existing checkout:
+`installer/setup.sh` is the same guided workflow used by the one-line bootstrap.
+The lower-level scripts remain available for manual maintenance:
 
-```bash
-git checkout dev
-git pull --ff-only
-git submodule update --init --recursive
+```text
+installer/bootstrap.sh   install OS/toolchain dependencies
+installer/install.sh     install/update product files and systemd service
+firmware/build.sh        reproducibly build the exact qualified firmware
+firmware/probe.sh        verify the running HAT firmware without configuring RF
+firmware/flash.sh        probe, back up, verify, or flash through the qualified path
 ```
 
-## Host development / CI-equivalent check
-
-```bash
-python3 -m venv .venv
-. .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-python -m pip install --no-deps ./vendor/ywd-1278
-python -m pip install --no-deps -e .
-bash scripts/check-p2-pre-rf.sh
-```
-
-The P2 host contract includes the full inherited P1 regression suite and verifies the exact submodule pin, Python/shell syntax, firmware safety profile, one-shot P2 client shape, persistent TX-disabled default, zero automatic retry path, and the RF-inert daemon framework self-test. CI never opens the modem UART or transmits RF.
-
-## Raspberry Pi machine setup
-
-The supported bootstrap currently targets Raspberry Pi OS / Debian-family systems. Qualified automatic HAT bootloader GPIO control is anchored to the Raspberry Pi 5 target used during YWD-1278 qualification.
-
-From the repo checkout:
-
-```bash
-sudo ./installer/bootstrap.sh
-```
-
-The bootstrap installs the Python/runtime tools plus the ARM firmware build and STM32 programming dependencies, initializes the exact submodule, and calls the product installer. It **does not flash firmware, start the modem service, or enable RF TX**.
-
-If dependencies are already installed, the smaller installer is:
-
-```bash
-sudo ./installer/install.sh
-```
-
-Installed layout:
+## Installed layout
 
 ```text
 /opt/ywd-mmdvm-tnc/source
 /opt/ywd-mmdvm-tnc/venv
 /etc/ywd-mmdvm-tnc/config.toml
 /var/lib/ywd-mmdvm-tnc
+/var/log/ywd-mmdvm-tnc
 /etc/systemd/system/ywd-mmdvm-tnc.service
 ```
 
-Installed commands:
+Useful commands:
+
+```bash
+sudo systemctl status ywd-mmdvm-tnc.service
+sudo systemctl restart ywd-mmdvm-tnc.service
+sudo journalctl -u ywd-mmdvm-tnc.service -f
+```
+
+## Configuration
+
+A safe local-only configuration looks like:
+
+```toml
+[hardware]
+target = "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
+
+[radio]
+device = "/dev/ttyAMA0"
+frequency_mhz = 145.050
+tx_power = 200
+tx_enabled = false
+
+[packet]
+baud = 1200
+txdelay_ms = 300
+persist = 63
+slottime_ms = 100
+
+[kiss]
+enabled = true
+listen = "127.0.0.1"
+port = 8001
+allow_wildcard_bind = false
+
+[agw]
+enabled = false
+listen = "127.0.0.1"
+port = 8000
+allow_wildcard_bind = false
+raw_only = true
+```
+
+The installed file also contains the exact qualified firmware identity and the
+hard-disabled automatic-flash setting used by the runtime safety checks.
+
+### LAN KISS access
+
+For a packet application running on another trusted LAN machine:
+
+```toml
+[kiss]
+enabled = true
+listen = "0.0.0.0"
+port = 8001
+allow_wildcard_bind = true
+```
+
+`0.0.0.0` is only the **bind address on the TNC Raspberry Pi**. Remote clients
+connect to the Pi's real LAN address, for example `192.168.1.50:8001`.
+
+KISS has no authentication or encryption. Do not expose TCP/8001 to the public
+Internet, an untrusted wireless network, or an unfiltered tunnel/VPN interface.
+Use a host/network firewall when needed.
+
+## LinBPQ example
+
+A typical LinBPQ port on another LAN host is:
 
 ```text
-ywd-tncd
-ywd-tnc-fw
-ywd-tnc-rx-gate
-ywd-tnc-p2-gate
+PORT
+ ID=YWD-MMDVM-TNC
+ TYPE=ASYNC
+ PROTOCOL=KISS
+ IPADDR=192.168.1.50
+ TCPPORT=8001
+ KISSOPTIONS=NOPARAMS
+ FRACK=7000
+ RESPTIME=1000
+ RETRIES=10
+ MAXFRAME=2
+ PACLEN=128
+ TXDELAY=300
+ SLOTTIME=100
+ PERSIST=63
+ FULLDUP=0
+ENDPORT
 ```
 
-A new config is created with `tx_enabled = false`. Existing config is preserved and the installer refuses to start the RF service automatically.
+Replace `192.168.1.50` with the actual address of the YWD-MMDVM-TNC Pi.
+`KISSOPTIONS=NOPARAMS` leaves the TNC's configured TXDELAY/PERSIST/SLOTTIME
+values authoritative.
 
-## Machine preflight
+The project has been physically tested with remote LinBPQ over LAN TCP KISS in
+both directions, including sustained connected-mode traffic and multi-frame
+transfers. Qualification records are stored under `qualification/`.
 
-With the HAT UART idle:
+## Firmware
 
-```bash
-YWD_TNC_PREFLIGHT_FULL_TOOLCHAIN=1 ./scripts/preflight.sh
+The RF-critical modem firmware is pinned to the qualified YWD-1278 AX25R4 core
+at commit:
+
+```text
+c28c46c3478d7931af611923c92cd8f692a00858
 ```
 
-This verifies the exact core pin, Python version, target Pi, `/dev/ttyAMA0`, idle UART, TX-disabled config, and the complete firmware/flash toolchain. It does not open the modem UART.
+Qualified firmware artifact:
 
-## Safe HAT identity probe
+- size: `59,892` bytes
+- SHA-256: `b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616`
+- flash base: `0x08000000`
+- STM32 bootloader version: `0x22`
+- STM32 device ID: `0x0410`
 
-Stop any old MMDVMHost/YWD-1278 process that owns `/dev/ttyAMA0`, then:
+The firmware binary intentionally retains its historical, physically-qualified
+runtime identity:
 
-```bash
-sudo ./firmware/probe.sh
+```text
+MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed
 ```
 
-The probe sends only GET_VERSION and requires the exact AX25R4 target identity. It does not configure RF, start RX, request TX, write flash, or touch option bytes.
+That string is not cosmetic: changing it would produce a different firmware
+binary and discard the exact byte-level qualification evidence. All new product
+paths, services, commands, installer UX, state, and documentation use the
+**YWD-MMDVM-TNC** name while the immutable firmware identity remains preserved
+for provenance.
 
-If this passes on a HAT that already has the physically qualified AX25R4 firmware installed, no firmware flash is needed for product qualification.
-
-## Reproducible qualified firmware build
+### Build the exact firmware
 
 Firmware builds are intentionally non-root:
 
@@ -200,103 +255,77 @@ Firmware builds are intentionally non-root:
 ./firmware/build.sh
 ```
 
-The wrapper verifies the exact core commit, runs the frozen YWD-1278 deterministic AX25R4 builder twice, requires byte-for-byte reproducibility, and verifies the final 59,892-byte artifact against the product SHA-256. Building never accesses the HAT, GPIO, flash, or RF.
+The build wrapper runs the pinned deterministic builder twice and requires both
+builds to match before verifying the expected artifact hash. Build details are
+written to the displayed log file. No HAT, GPIO, flash, or RF access occurs.
 
-Inspect the product firmware contract without hardware access:
+### Probe the installed firmware
 
-```bash
-ywd-tnc-fw --profile firmware/product-ax25r4.json show
-```
-
-## Explicit qualified firmware tool
-
-Firmware deployment is **never part of installation or service startup**.
-
-Safe identity probe through the firmware tool:
+Stop the running modem service first so the UART is available:
 
 ```bash
-sudo ./firmware/flash.sh probe
+sudo systemctl stop ywd-mmdvm-tnc.service
+sudo ./firmware/probe.sh
 ```
 
-Capture a protected stock rollback image while exact stock firmware is running:
+The probe performs only the safe firmware identity transaction and does not
+configure RF or write flash.
+
+### Back up stock firmware
 
 ```bash
 sudo ./firmware/flash.sh backup
 ```
 
-Program/verify the exact qualified image only when needed:
+A valid stock backup uses two independent full main-flash reads. They must be
+byte-identical and must match the physically-qualified stock SHA-256 before the
+backup is accepted.
+
+### Install / verify the qualified firmware manually
 
 ```bash
 sudo ./firmware/flash.sh flash --authorize FLASH-QUALIFIED-AX25R4
 ```
 
-A write additionally requires typing:
+If the exact product firmware is already installed, the tool verifies the
+programmed bytes without rewriting main flash. If stock firmware is running,
+the tool first creates/verifies the protected rollback backup and then requests
+the explicit `WRITE-FIRMWARE-NOW` confirmation immediately before the write.
+Programmed bytes are read back independently afterward. Option bytes are never
+written.
 
-```text
-WRITE-FIRMWARE-NOW
-```
+## Safety model
 
-The flash path requires the exact artifact, exact target/STM32 bootloader identity, a verified two-pass golden-stock rollback backup before any main-flash write, independent programmed readback, and exact post-operation runtime identity. Option-byte operations are never issued. If the exact qualified AX25R4 firmware is already running, flash mode verifies programmed bytes without rewriting main flash.
+- RF TX defaults disabled.
+- Product TX is currently restricted to the physically-qualified
+  145.050 MHz / power-200 profile.
+- Installation does not silently enable TX.
+- Firmware writes are never automatic or silent.
+- A verified stock rollback image is required before a stock-to-product write.
+- Programmed firmware is independently read back and verified.
+- STM32 option bytes are never written.
+- One process owns the HAT UART.
+- KISS and AGW clients receive live frames only; historical RF packets are not
+  replayed to new clients.
+- Connected-mode retries/session state remain in the external packet stack,
+  not in the modem service.
 
-For migration safety, an old `/var/lib/ywd-1278/firmware-backups/...` backup may be reused only if the new verifier independently proves it has the exact target, geometry, two-pass evidence, and golden stock SHA-256.
+## Qualification
 
-## P1 physical RX qualification
+The current stack has passed physical tests for:
 
-P1's historical RX-only gate is retained for reproducibility. Keep `/etc/ywd-mmdvm-tnc/config.toml` at 145.050 MHz with `tx_enabled = false`, then run:
+- live Bell-202 / AX.25 receive on the qualified HAT
+- one-shot TCP KISS transmit with independent over-air decode
+- RX recovery on the same KISS connection after TX
+- no automatic modem-layer TX retry
+- remote LAN TCP KISS operation
+- real LinBPQ bidirectional interoperability and sustained connected-mode traffic
 
-```bash
-sudo ./scripts/p1-rx-physical.sh
-```
+Machine-readable evidence is kept in `qualification/` and exact historical
+checkpoint branches are retained in Git.
 
-Success includes `YWD_TNC_P1_LIVE_RX=PASS`, `KISS_BYTES_SENT=0`, `TX_REQUESTED=NO`, `PHYSICAL_GATE_RF_DIRECTION=RX_ONLY`, and `YWD_TNC_P1_PHYSICAL_RX=PASS`.
+## License
 
-## P2 physical one-shot TCP-KISS TX qualification
-
-P2 also requires the persistent config to remain TX-disabled. The qualification harness grants temporary in-memory TX authority only for the previously qualified 145.050 MHz / power-200 profile.
-
-Run:
-
-```bash
-sudo ./scripts/p2-kiss-tx-physical.sh
-```
-
-The operator must explicitly type `P2-TX-ONCE-145050`. The client then issues exactly one TCP-KISS DATA request for:
-
-```text
-KJ6YWD-10>YWD127:YWD-MMDVM-TNC P2 1/1
-```
-
-The physical gate requires one independent over-air decode of that exact frame, proves queue/runtime dispatch counts remain exactly one through a hold period, and finally requires fresh RF receive on the same TCP KISS connection after TX. It does not modify the persistent config and has no client retry loop.
-
-The 2026-09-07 physical run passed all of those gates. See `qualification/p2-kiss-tx-physical-2026-09-07.json` for exact counters, raw frame hex, independent receiver evidence, and post-TX RX evidence.
-
-## Service ownership
-
-`ywd-mmdvm-tnc.service` conflicts with MMDVMHost-family services and the old `ywd-1278.service`, preventing intentional simultaneous ownership of the HAT UART. The installer does not disable those services behind the operator's back; starting `ywd-mmdvm-tnc.service` is the explicit handoff point.
-
-## Safety constraints
-
-- Persistent RF TX defaults off.
-- P1 physical qualification is RX-only.
-- P2 physical TX authority is one-shot, explicit, temporary and in-memory only.
-- Product TX remains restricted in code to the physically qualified 145.050 MHz / power-200 profile.
-- The P2 client has no automatic retry; one admitted request must produce at most one dispatch.
-- Firmware runtime identity must exactly match the qualified AX25R4 image.
-- Firmware flashing is never automatic.
-- Installation never flashes firmware or starts the RF service.
-- Actual firmware write requires exact artifact, stock rollback proof, explicit authorization and typed confirmation.
-- Programmed bytes are independently read back and verified.
-- Option bytes are never written.
-- KISS/AGW clients never receive stored packet history.
-
-## Branch policy
-
-- `main` — last promoted/stable checkpoint
-- `dev` — active development
-- `checkpoint/*` — exact qualification/handoff tips
-
-P1 RX and P2 one-shot TCP-KISS TX/same-connection RX recovery have passed the target Pi/HAT over-air gates. `checkpoint/p1-rx-physical-qualified` identifies the P1 evidence-bearing tip; `checkpoint/p2-kiss-tx-pre-rf` preserves the exact P2 code-under-test tip. The evidence-bearing P2 physical checkpoint is pinned separately after exact-tip CI validates this record.
-
-## Licensing
-
-Host-side YWD code is GPL-2.0-or-later. Firmware derived from MMDVM_HS retains the applicable upstream GPL notices and attribution. See `LICENSING.md` and the pinned vendor source for exact provenance.
+Host-side YWD code is GPL-2.0-or-later. Firmware derived from MMDVM_HS retains
+its applicable upstream GPL notices and attribution. See `LICENSING.md` and the
+pinned vendor source for provenance.

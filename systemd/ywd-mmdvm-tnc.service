@@ -1,5 +1,5 @@
 [Unit]
-Description=YWD-MMDVM-TNC dedicated AX.25 modem service
+Description=YWD-MMDVM-TNC 1200-baud AX.25 TCP KISS modem
 Documentation=https://github.com/merberg-ai/ywd-mmdvm-tnc
 After=local-fs.target network.target
 Conflicts=MMDVMHost.service mmdvmhost.service ywd-mmdvmhost.service ywd-hotspot-mmdvmhost.service ywd-1278.service
@@ -8,7 +8,7 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
-ExecStartPre=/usr/bin/python3 /opt/ywd-mmdvm-tnc/source/vendor/ywd-1278/firmware/hat_control.py application-release --config /etc/ywd-mmdvm-tnc/config.toml
+ExecStartPre=/usr/bin/python3 /opt/ywd-mmdvm-tnc/source/firmware/hat_control.py application-release --config /etc/ywd-mmdvm-tnc/config.toml
 ExecStart=/opt/ywd-mmdvm-tnc/venv/bin/ywd-tncd --config /etc/ywd-mmdvm-tnc/config.toml
 Restart=on-failure
 RestartSec=2s
@@ -22,6 +22,7 @@ ProtectHome=true
 ProtectSystem=full
 StandardOutput=journal
 StandardError=journal
+SyslogIdentifier=ywd-mmdvm-tnc
 
 [Install]
 WantedBy=multi-user.target

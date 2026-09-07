@@ -1,10 +1,5 @@
-# YWD-MMDVM-TNC example configuration
-# Safe defaults: RF transmission disabled; network listeners loopback-only.
-#
-# For an explicitly trusted LAN KISS deployment, 0.0.0.0 is accepted only
-# when allow_wildcard_bind=true in that same listener section. 0.0.0.0 binds
-# every IPv4 interface, so use a host firewall if the machine has any
-# untrusted/public interface.
+# YWD-MMDVM-TNC configuration
+# Safe defaults: receive-only, TCP KISS local-only, optional AGW disabled.
 
 [hardware]
 target = "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
@@ -28,12 +23,13 @@ port = 8001
 allow_wildcard_bind = false
 
 [agw]
-enabled = true
+enabled = false
 listen = "127.0.0.1"
 port = 8000
 allow_wildcard_bind = false
 raw_only = true
 
 [firmware]
+# This exact runtime identity belongs to the immutable, physically-qualified image.
 required_identity = "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
 allow_automatic_flash = false

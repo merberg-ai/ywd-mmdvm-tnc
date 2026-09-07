@@ -2,7 +2,7 @@
   "schema": 1,
   "product": "YWD-MMDVM-TNC",
   "series": "AX25R4",
-  "status": "p1-pre-rf-machine-ready",
+  "status": "p3-linbpq-interoperability-qualified",
   "qualified_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
   "qualified_core_tree": "9c06dea088a30782674404f43d964b8317c128a3",
   "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021",
@@ -41,6 +41,6 @@
     "option_bytes_permitted": false,
     "tx_must_remain_disabled_during_flash": true,
     "installer_may_flash": false,
+    "guided_setup_may_offer_explicit_firmware_tool": true,
     "service_may_auto_flash": false
   }
-}
