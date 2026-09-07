@@ -133,7 +133,7 @@ if [[ "$firmware_answer" == yes ]]; then
   printf '%s\n' "The firmware tool preserves a verified stock rollback image before any write."
   printf '%s\n' "A real flash write still requires typing WRITE-FIRMWARE-NOW."
 
-  if ! YWD_TNC_LOG_FILE="$YWD_TNC_LOG_FILE" "$ROOT/firmware/ensure.sh"; then
+  if ! YWD_TNC_LOG_FILE="$YWD_TNC_LOG_FILE" bash "$ROOT/firmware/ensure.sh"; then
     ui_fail "Qualified firmware could not be prepared."
     exit 19
   fi

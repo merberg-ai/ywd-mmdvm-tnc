@@ -43,9 +43,9 @@ assert 'ui_prompt_yes_no tx_answer "Enable RF transmit?" no' in setup
 assert 'listen = "$kiss_listen"' in setup
 assert 'allow_wildcard_bind = $wildcard' in setup
 assert 'WRITE-FIRMWARE-NOW' in setup
-assert 'firmware/ensure.sh' in setup
+assert 'bash "$ROOT/firmware/ensure.sh"' in setup
 assert 'firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4' in setup
-assert setup.index('firmware/ensure.sh') < setup.index('firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4')
+assert setup.index('bash "$ROOT/firmware/ensure.sh"') < setup.index('firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4')
 assert 'verify-artifact' in ensure
 assert 'firmware/build.sh' in ensure
 assert 'YWD_TNC_INSTALLER_BUILD=1' in ensure
@@ -75,6 +75,7 @@ assert 'ywd-1278.service' in service
 
 print("PUBLIC_INSTALLER_UI_CONTRACT=PASS")
 print("PUBLIC_STOCK_HAT_AUTO_BUILD_CONTRACT=PASS")
+print("PUBLIC_SCRIPT_EXECUTION_CONTRACT=PASS")
 print("PUBLIC_CONFIG_SAFE_DEFAULTS=PASS")
 print("PUBLIC_SERVICE_BRANDING=PASS")
 print("PUBLIC_README_CONTRACT=PASS")
