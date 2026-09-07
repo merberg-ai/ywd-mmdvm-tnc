@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "product": "YWD-MMDVM-TNC",
+  "phase": "P3",
+  "qualification": "LINBPQ_LAN_TCP_KISS_INTEROPERABILITY_PHYSICAL",
+  "status": "PASS",
+  "qualified_local_date": "2026-09-07",
+  "code_under_test_commit": "6d11491f3a498cda5f79cb6a605d062c41f7b9df",
+  "qualified_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+  "pre_rf_checkpoint": "checkpoint/p3-linbpq-lan-rx-pre-rf",
+  "network": {
+    "transport": "TCP KISS",
+    "kiss_bind": "0.0.0.0",
+    "kiss_port": 8001,
+    "application_stack": "LinBPQ",
+    "application_host": "separate system on the trusted LAN"
+  },
+  "radio": {
+    "frequency_hz": 145050000,
+    "tx_power": 200,
+    "mode": "1200-baud AX.25 half-duplex"
+  },
+  "observed_interoperability": [
+    {
+      "scenario": "full remote LinBPQ RX/TX over LAN TCP KISS",
+      "result": "PASS"
+    },
+    {
+      "scenario": "connected-mode session to KJ6YWD-5",
+      "result": "PASS",
+      "observation": "large node-list transfer completed with no problems"
+    },
+    {
+      "scenario": "outbound connected-mode session to RDG via YWDNOD",
+      "result": "PASS",
+      "observation": "connection and traffic worked as expected"
+    }
+  ],
+  "scope": {
+    "remote_kiss_tcp_connection": "PASS",
+    "rf_to_linbpq_receive": "PASS",
+    "linbpq_to_rf_transmit": "PASS",
+    "sustained_multi_frame_transfer": "PASS",
+    "connected_mode_operation": "PASS"
+  },
+  "architecture": {
+    "ywd_tncd_role": "modem/TNC boundary only",
+    "linbpq_role": "AX.25 connected-mode session state, acknowledgements, retries, routing and node behavior",
+    "modem_connected_mode_state_added": false
+  },
+  "evidence_source": "operator-reported live interoperability test on the physical LAN/RF system",
+  "notes": "No exact frame count is asserted by this record. The qualification claim is the successful real-world bidirectional LinBPQ interoperability scenarios reported above."
+}

@@ -20,10 +20,10 @@ allow_wildcard_bind = true
 
 The shipped example remains loopback-only and TX-disabled.
 
-## P3 RX-only TNC configuration
+## P3 staging configuration
 
-For the first LinBPQ integration gate, keep persistent RF TX disabled and change
-only the KISS listener in `/etc/ywd-mmdvm-tnc/config.toml`:
+The initial remote-LinBPQ gate used the already-qualified 145.050 MHz radio
+profile and changed only the KISS listener while keeping persistent RF TX off:
 
 ```toml
 [radio]
@@ -62,40 +62,69 @@ PORT
  TXDELAY=300
  SLOTTIME=100
  PERSIST=63
+ FULLDUP=0
 ENDPORT
 ```
 
-`NOPARAMS` is intentional for the qualification gate: LinBPQ does not send KISS
+`NOPARAMS` is intentional for qualification: LinBPQ does not send KISS
 TXDELAY/PERSIST/SLOTTIME updates, so the already-qualified YWD-MMDVM-TNC
 configuration remains authoritative.
 
-## Physical P3 LAN RX gate
+## Initial physical P3 LAN RX gate
 
-After installing the P3 checkpoint and editing the TNC config:
+The staging gate is retained at:
 
 ```bash
 sudo ./scripts/p3-lan-kiss-physical.sh
 ```
 
-The gate requires:
+It requires 145.050 MHz, KISS on `0.0.0.0:8001`, explicit wildcard
+authorization, a non-loopback established TCP KISS connection from the remote
+LinBPQ host, and one normal live RF packet observed in LinBPQ while persistent
+TX remains disabled.
 
-- 145.050 MHz;
-- persistent TX disabled;
-- KISS enabled on `0.0.0.0:8001`;
-- explicit wildcard authorization;
-- a non-loopback established TCP KISS connection from the remote LinBPQ host;
-- one normal live RF packet observed in LinBPQ.
+## Full LinBPQ interoperability qualification
 
-Success ends with:
+On 2026-09-07, exact product commit
+`6d11491f3a498cda5f79cb6a605d062c41f7b9df` was then exercised with real
+LinBPQ traffic over the LAN TCP KISS interface and the physically-qualified
+145.050 MHz / power-200 RF path.
+
+The live interoperability test passed in both directions:
+
+- remote LinBPQ received live RF through YWD-MMDVM-TNC over TCP KISS;
+- LinBPQ-originated traffic transmitted successfully through the same KISS/RF
+  path;
+- a connected-mode session to `KJ6YWD-5` successfully transferred a large
+  node list without problems;
+- an outbound connected-mode session to `RDG` via `YWDNOD` connected and
+  operated as expected.
+
+This is intentionally an interoperability qualification rather than a claim
+that connected-mode state moved into YWD-MMDVM-TNC. LinBPQ remains responsible
+for AX.25 connection state, acknowledgements, retries, routing, node behavior,
+FRACK/MAXFRAME/PACLEN and related application policy. `ywd-tncd` remains the
+single-owner modem/TNC boundary: TCP KISS ingress/egress, bounded TX admission,
+channel access, Bell-202 RX/TX and half-duplex RF lifecycle.
+
+The machine-readable qualification record is:
 
 ```text
-LINBPQ_REMOTE_TCP_ESTABLISHED=PASS
-LINBPQ_LIVE_RX_CONFIRMED=YES
-PERSISTENT_TX_ENABLED=NO
-RF_DIRECTION=RX_ONLY
-LINBPQ_KISS_TCP_LAN=PASS
-YWD_TNC_P3_LAN_RX=PASS
+qualification/p3-linbpq-lan-kiss-interoperability-2026-09-07.json
 ```
 
-P3 does not yet authorize persistent LinBPQ-originated RF TX. That becomes the
-next physical gate after remote KISS RX is independently proven.
+P3 therefore qualifies the intended real product composition:
+
+```text
+LinBPQ on another LAN host
+        |
+        | TCP KISS :8001
+        v
+YWD-MMDVM-TNC / ywd-tncd
+        |
+        v
+qualified AX25R4 HAT
+        |
+        v
+145.050 MHz packet RF
+```
