@@ -28,15 +28,15 @@ Exactly one process owns the HAT UART. KISS and AGW share one RX decoder, one bo
 
 ## Development status
 
-P1 is the **pre-RF machine-ready checkpoint**. The repo now includes the standalone/rebranded install, preflight, firmware build/verification, safe HAT probe, explicit qualified flash, and RX-only physical qualification tooling needed to move the new product onto the target Pi.
-
-P1 host CI does **not** touch hardware or RF. The first new physical gate is intentionally RX-only:
+**P1 RX is physically qualified.** On 2026-09-07, the target Raspberry Pi 5 / MMDVM_HS HAT passed the live over-air receive gate at 145.050 MHz using the exact `f7f2b3d6e3e381de8db21f2cabf7bcef667c7523` product runtime tip. The proven path is:
 
 ```text
 145.050 MHz RF -> AX25R4 HAT -> ywd-tncd -> TCP KISS -> ywd-tnc-rx-gate
 ```
 
-The physical gate requires `radio.tx_enabled = false` and the RX test client never writes to the KISS socket.
+The qualifying frame decoded as `KJ6YWD>JIM,KRDG,KBANN` UI/PID `0xF0` with information `hello test`. The receive-only gate reported `KISS_BYTES_SENT=0`, `TX_REQUESTED=NO`, and `PHYSICAL_GATE_RF_DIRECTION=RX_ONLY`; product RF TX remained disabled throughout.
+
+The full machine-readable qualification record is `qualification/p1-rx-physical-2026-09-07.json`. P1 host CI remains hardware/RF-inert; this physical evidence was produced only on the qualified target Pi/HAT.
 
 ## Qualified provenance
 
@@ -300,7 +300,7 @@ Do **not** enable TX for P1. TX-through-KISS becomes a separate checkpoint only 
 - `dev` — active development
 - `checkpoint/*` — exact qualification/handoff tips
 
-P1 pre-RF is staged and qualified on `dev` first. `main` should not claim the physical P1 RX result until the target Pi/HAT actually passes the over-air gate.
+P1 RX has now passed the target Pi/HAT over-air gate. The frozen pre-RF branch remains as historical staging evidence, while `checkpoint/p1-rx-physical-qualified` identifies the evidence-bearing physical qualification tip.
 
 ## Licensing
 

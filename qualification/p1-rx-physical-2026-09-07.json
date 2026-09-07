@@ -1,0 +1,67 @@
+{
+  "evidence_markers": [
+    "YWD_TNC_MACHINE_PREFLIGHT=PASS",
+    "YWD_TNC_HAT_PROBE=PASS",
+    "YWD_TNC_P1_LIVE_RX=PASS",
+    "KISS_BYTES_SENT=0",
+    "TX_REQUESTED=NO",
+    "PHYSICAL_GATE_RF_DIRECTION=RX_ONLY",
+    "YWD_TNC_P1_PHYSICAL_RX=PASS"
+  ],
+  "gates": {
+    "hat_probe": "PASS",
+    "live_rx": "PASS",
+    "machine_preflight": "PASS",
+    "physical_rx": "PASS"
+  },
+  "hardware": {
+    "runtime_identity": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed",
+    "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
+  },
+  "host": {
+    "model": "Raspberry Pi 5 Model B Rev 1.0",
+    "modem_device": "/dev/ttyAMA0",
+    "python": "3.13"
+  },
+  "kiss": {
+    "bytes_sent_by_gate": 0,
+    "connect_attempts": 2,
+    "listen": "127.0.0.1",
+    "port": 8001,
+    "tx_requested": false
+  },
+  "observed_frame": {
+    "destination": "JIM",
+    "frame_bytes": 40,
+    "frame_hex": "94929a404040e096946cb2ae886096a4888e4040609684829c9c406103f068656c6c6f2074657374",
+    "frame_type": "UI",
+    "information": "hello test",
+    "path": [
+      "KRDG",
+      "KBANN"
+    ],
+    "pid": "0xF0",
+    "source": "KJ6YWD"
+  },
+  "phase": "P1",
+  "product": "YWD-MMDVM-TNC",
+  "qualification": "RX_ONLY_PHYSICAL",
+  "qualified_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+  "qualified_local_date": "2026-09-07",
+  "qualified_product_commit": "f7f2b3d6e3e381de8db21f2cabf7bcef667c7523",
+  "radio": {
+    "frequency_hz": 145050000,
+    "tx_enabled": false,
+    "tx_power_config": 200
+  },
+  "safety": {
+    "firmware_flash_performed": false,
+    "kiss_gate_writes": false,
+    "option_bytes_written": false,
+    "rf_direction": "RX_ONLY",
+    "rf_tx_enabled": false,
+    "tx_requested": false
+  },
+  "schema": 1,
+  "status": "PASS"
+}
