@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 import unittest
 
 
@@ -8,15 +9,36 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class P1ToolingContractTests(unittest.TestCase):
-    def test_installer_and_bootstrap_do_not_flash(self) -> None:
+    def test_low_level_installer_and_bootstrap_do_not_flash_or_start_service(self) -> None:
+        """Preserve the original P1 safety boundary after public-UX polish.
+
+        The low-level bootstrap/install scripts may prepare dependencies, copy
+        files and register the unit, but they must not deploy firmware or start
+        RF. The separate guided setup layer is the explicit operator-controlled
+        orchestration path that may invoke those already-qualified operations.
+        """
+
         for relative in ("installer/install.sh", "installer/bootstrap.sh"):
             text = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertNotIn("stm32flash", text if relative.endswith("install.sh") else "")
             self.assertNotIn("qualified_flash.py", text)
             self.assertNotIn("firmware/flash.sh", text)
-        bootstrap = (ROOT / "installer/bootstrap.sh").read_text(encoding="utf-8")
-        self.assertIn("SERVICE_STARTED=NO", bootstrap)
-        self.assertIn("TX_ENABLED_BY_BOOTSTRAP=NO", bootstrap)
+            self.assertIsNone(
+                re.search(r"\bsystemctl\s+(?:start|restart|enable)\b", text),
+                msg=f"{relative} must not start/enable the modem service",
+            )
+
+        install = (ROOT / "installer/install.sh").read_text(encoding="utf-8")
+        self.assertNotIn("stm32flash", install)
+        self.assertIn("systemctl daemon-reload", install)
+
+    def test_guided_setup_is_the_explicit_deployment_orchestrator(self) -> None:
+        setup = (ROOT / "installer/setup.sh").read_text(encoding="utf-8")
+        self.assertIn('ui_prompt_yes_no tx_answer "Enable RF transmit?" no', setup)
+        self.assertIn('firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4', setup)
+        self.assertIn("WRITE-FIRMWARE-NOW", setup)
+        self.assertIn('ui_prompt_yes_no firmware_answer', setup)
+        self.assertIn('systemctl enable "$SERVICE"', setup)
+        self.assertIn('systemctl restart "$SERVICE"', setup)
 
     def test_build_delegates_to_exact_frozen_builder(self) -> None:
         text = (ROOT / "firmware" / "build.sh").read_text(encoding="utf-8")
