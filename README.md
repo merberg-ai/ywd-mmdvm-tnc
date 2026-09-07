@@ -28,15 +28,28 @@ Exactly one process owns the HAT UART. KISS and AGW share one RX decoder, one bo
 
 ## Development status
 
-**P1 RX is physically qualified.** On 2026-09-07, the target Raspberry Pi 5 / MMDVM_HS HAT passed the live over-air receive gate at 145.050 MHz using the exact `f7f2b3d6e3e381de8db21f2cabf7bcef667c7523` product runtime tip. The proven path is:
+**P2 TCP-KISS TX and same-connection RX recovery are physically qualified.** On 2026-09-07, the target Raspberry Pi 5 / MMDVM_HS HAT passed a one-shot transmit qualification at 145.050 MHz / power 200 using exact product commit `c9e1cfe051326643eb16093f79e65fa272d29796`.
+
+The transmitted application frame was exactly:
 
 ```text
-145.050 MHz RF -> AX25R4 HAT -> ywd-tncd -> TCP KISS -> ywd-tnc-rx-gate
+KJ6YWD-10>YWD127:YWD-MMDVM-TNC P2 1/1
 ```
 
-The qualifying frame decoded as `KJ6YWD>JIM,KRDG,KBANN` UI/PID `0xF0` with information `hello test`. The receive-only gate reported `KISS_BYTES_SENT=0`, `TX_REQUESTED=NO`, and `PHYSICAL_GATE_RF_DIRECTION=RX_ONLY`; product RF TX remained disabled throughout.
+An independent over-air receiver decoded that exact UI/PID `0xF0` frame once. Product accounting independently proved one TCP-KISS request, one admission, one queue dispatch and one runtime RF dispatch. After a three-second hold the dispatch count remained exactly one, proving no automatic internal retry.
 
-The full machine-readable qualification record is `qualification/p1-rx-physical-2026-09-07.json`. P1 host CI remains hardware/RF-inert; this physical evidence was produced only on the qualified target Pi/HAT.
+The same TCP KISS connection then received fresh live RF after TX. The formal return frame decoded as `KJ6YWD>JIM,KRDG,KBANN,KJOHN,KBULN,WOODY` UI/PID `0xF0` with information `yooooooooo hellooooooo`. RX had in fact already resumed before that formal return gate: the harness drained 18 KISS bytes of intervening traffic and its decoded-RX baseline had advanced to one.
+
+Persistent `/etc/ywd-mmdvm-tnc/config.toml` remained TX-disabled and unmodified; P2's TX authority existed only in memory for the qualification process. The full machine-readable record is `qualification/p2-kiss-tx-physical-2026-09-07.json`.
+
+**P1 RX remains physically qualified.** Its full machine-readable record is `qualification/p1-rx-physical-2026-09-07.json`.
+
+The physically proven product boundary is now bidirectional:
+
+```text
+TCP KISS -> ywd TNCEngine -> qualified AX25R4 HAT -> 145.050 MHz RF
+145.050 MHz RF -> qualified AX25R4 HAT -> same TNCEngine -> same TCP KISS connection
+```
 
 ## Qualified provenance
 
@@ -113,10 +126,10 @@ python3 -m venv .venv
 python -m pip install --upgrade pip setuptools wheel
 python -m pip install --no-deps ./vendor/ywd-1278
 python -m pip install --no-deps -e .
-bash scripts/check-p1-pre-rf.sh
+bash scripts/check-p2-pre-rf.sh
 ```
 
-The P1 host contract verifies the exact submodule pin, Python/shell syntax, firmware safety profile, modem-only unit tests, RX-gate no-write behavior, and the RF-inert daemon framework self-test.
+The P2 host contract includes the full inherited P1 regression suite and verifies the exact submodule pin, Python/shell syntax, firmware safety profile, one-shot P2 client shape, persistent TX-disabled default, zero automatic retry path, and the RF-inert daemon framework self-test. CI never opens the modem UART or transmits RF.
 
 ## Raspberry Pi machine setup
 
@@ -152,6 +165,7 @@ Installed commands:
 ywd-tncd
 ywd-tnc-fw
 ywd-tnc-rx-gate
+ywd-tnc-p2-gate
 ```
 
 A new config is created with `tx_enabled = false`. Existing config is preserved and the installer refuses to start the RF service automatically.
@@ -174,9 +188,9 @@ Stop any old MMDVMHost/YWD-1278 process that owns `/dev/ttyAMA0`, then:
 sudo ./firmware/probe.sh
 ```
 
-The P1 probe sends only GET_VERSION and requires the exact AX25R4 target identity. It does not configure RF, start RX, request TX, write flash, or touch option bytes.
+The probe sends only GET_VERSION and requires the exact AX25R4 target identity. It does not configure RF, start RX, request TX, write flash, or touch option bytes.
 
-If this passes on a HAT that already has the physically qualified AX25R4 firmware installed, **no firmware flash is needed for the P1 RX test**.
+If this passes on a HAT that already has the physically qualified AX25R4 firmware installed, no firmware flash is needed for product qualification.
 
 ## Reproducible qualified firmware build
 
@@ -228,54 +242,33 @@ For migration safety, an old `/var/lib/ywd-1278/firmware-backups/...` backup may
 
 ## P1 physical RX qualification
 
-Keep `/etc/ywd-mmdvm-tnc/config.toml` at:
-
-```toml
-[radio]
-frequency_mhz = 145.050
-tx_power = 200
-tx_enabled = false
-
-[kiss]
-enabled = true
-listen = "127.0.0.1"
-port = 8001
-```
-
-The easiest physical gate is:
+P1's historical RX-only gate is retained for reproducibility. Keep `/etc/ywd-mmdvm-tnc/config.toml` at 145.050 MHz with `tx_enabled = false`, then run:
 
 ```bash
 sudo ./scripts/p1-rx-physical.sh
 ```
 
-That wrapper refuses anything except the exact 145.050/TX-disabled/loopback-KISS profile, starts `ywd-mmdvm-tnc.service` if needed, and invokes the receive-only KISS gate. When prompted, transmit **one normal 1200-baud AX.25 packet on 145.050 MHz from another station/radio**.
+Success includes `YWD_TNC_P1_LIVE_RX=PASS`, `KISS_BYTES_SENT=0`, `TX_REQUESTED=NO`, `PHYSICAL_GATE_RF_DIRECTION=RX_ONLY`, and `YWD_TNC_P1_PHYSICAL_RX=PASS`.
 
-Success includes:
+## P2 physical one-shot TCP-KISS TX qualification
+
+P2 also requires the persistent config to remain TX-disabled. The qualification harness grants temporary in-memory TX authority only for the previously qualified 145.050 MHz / power-200 profile.
+
+Run:
+
+```bash
+sudo ./scripts/p2-kiss-tx-physical.sh
+```
+
+The operator must explicitly type `P2-TX-ONCE-145050`. The client then issues exactly one TCP-KISS DATA request for:
 
 ```text
-YWD_TNC_P1_LIVE_RX=PASS
-KISS_BYTES_SENT=0
-TX_REQUESTED=NO
-PHYSICAL_GATE_RF_DIRECTION=RX_ONLY
-YWD_TNC_P1_PHYSICAL_RX=PASS
+KJ6YWD-10>YWD127:YWD-MMDVM-TNC P2 1/1
 ```
 
-The decoded source, destination, path, frame type, PID, information text and raw frame hex are printed as qualification evidence.
+The physical gate requires one independent over-air decode of that exact frame, proves queue/runtime dispatch counts remain exactly one through a hold period, and finally requires fresh RF receive on the same TCP KISS connection after TX. It does not modify the persistent config and has no client retry loop.
 
-For manual two-terminal operation instead:
-
-```bash
-sudo systemctl start ywd-mmdvm-tnc.service
-sudo journalctl -fu ywd-mmdvm-tnc.service
-```
-
-Then in another terminal:
-
-```bash
-ywd-tnc-rx-gate --timeout 120
-```
-
-Do **not** enable TX for P1. TX-through-KISS becomes a separate checkpoint only after this new product boundary has independently passed RX.
+The 2026-09-07 physical run passed all of those gates. See `qualification/p2-kiss-tx-physical-2026-09-07.json` for exact counters, raw frame hex, independent receiver evidence, and post-TX RX evidence.
 
 ## Service ownership
 
@@ -283,9 +276,11 @@ Do **not** enable TX for P1. TX-through-KISS becomes a separate checkpoint only 
 
 ## Safety constraints
 
-- RF TX defaults off.
+- Persistent RF TX defaults off.
 - P1 physical qualification is RX-only.
-- Enabling product TX remains restricted in code to the previously qualified 145.050 MHz / power-200 profile.
+- P2 physical TX authority is one-shot, explicit, temporary and in-memory only.
+- Product TX remains restricted in code to the physically qualified 145.050 MHz / power-200 profile.
+- The P2 client has no automatic retry; one admitted request must produce at most one dispatch.
 - Firmware runtime identity must exactly match the qualified AX25R4 image.
 - Firmware flashing is never automatic.
 - Installation never flashes firmware or starts the RF service.
@@ -300,7 +295,7 @@ Do **not** enable TX for P1. TX-through-KISS becomes a separate checkpoint only 
 - `dev` — active development
 - `checkpoint/*` — exact qualification/handoff tips
 
-P1 RX has now passed the target Pi/HAT over-air gate. The frozen pre-RF branch remains as historical staging evidence, while `checkpoint/p1-rx-physical-qualified` identifies the evidence-bearing physical qualification tip.
+P1 RX and P2 one-shot TCP-KISS TX/same-connection RX recovery have passed the target Pi/HAT over-air gates. `checkpoint/p1-rx-physical-qualified` identifies the P1 evidence-bearing tip; `checkpoint/p2-kiss-tx-pre-rf` preserves the exact P2 code-under-test tip. The evidence-bearing P2 physical checkpoint is pinned separately after exact-tip CI validates this record.
 
 ## Licensing
 

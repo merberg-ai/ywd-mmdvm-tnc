@@ -1,0 +1,147 @@
+{
+  "evidence_markers": [
+    "P2_PERSISTENT_CONFIG=PASS",
+    "P2_ONE_SHOT_TX_AUTHORIZED=YES",
+    "KISS_DATA_REQUESTS_SENT=1",
+    "SOCKET_SENDALL_CALLS=1",
+    "CLIENT_RETRY_COUNT=0",
+    "TX_QUEUE_ACCEPTED_DELTA=1",
+    "TX_QUEUE_DISPATCHED_DELTA=1",
+    "TX_RUNTIME_DISPATCH_DELTA=1",
+    "RX_DECODER_RESET_DELTA=1",
+    "TX_QUEUE_DEPTH_AFTER_DISPATCH=0",
+    "NO_SECOND_INTERNAL_DISPATCH_AFTER_HOLD=PASS",
+    "INDEPENDENT_EXTERNAL_DECODE_CONFIRMED=YES",
+    "PRODUCT_CONVERSE_LIVE_RX=PASS",
+    "SAME_KISS_CONNECTION_RX=PASS",
+    "SUBSCRIBER_DROPS=0",
+    "AUTOMATIC_TX_RETRY=NO",
+    "RX_RESUMED_AFTER_TX=PASS",
+    "YWD_TNC_P2_PHYSICAL=PASS",
+    "PERSISTENT_CONFIG_MODIFIED=NO",
+    "PERSISTENT_TX_ENABLED=NO",
+    "YWD_TNC_P2_WRAPPER=PASS"
+  ],
+  "gates": {
+    "independent_external_decode": "PASS",
+    "no_second_internal_dispatch_hold": "PASS",
+    "one_shot_tcp_kiss_tx": "PASS",
+    "persistent_config_safety": "PASS",
+    "same_connection_live_rx_recovery": "PASS",
+    "wrapper": "PASS"
+  },
+  "hardware": {
+    "host_model": "Raspberry Pi 5 Model B Rev 1.0",
+    "runtime_identity": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed",
+    "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
+  },
+  "independent_receiver": {
+    "exact_tx_decode": {
+      "destination": "YWD127",
+      "frame_type": "UI",
+      "information": "YWD-MMDVM-TNC P2 1/1",
+      "line": "vhf: fm KJ6YWD-10 to YWD127 ctl UI^ pid=F0(Text) len 20 18:15:41.069776",
+      "pid": "0xF0",
+      "reported_timestamp": "18:15:41.069776",
+      "source": "KJ6YWD-10"
+    },
+    "subsequent_live_traffic": [
+      "vhf: fm KE6CHO-5 to KJ6YWD-5 ctl RR7- 18:16:03.012986",
+      "vhf: fm KJ6YWD to JIM via KRDG KBANN KJOHN KBULN WOODY ctl UI^ pid=F0(Text) len 22 18:16:11.616325",
+      "yooooooooo hellooooooo",
+      "vhf: fm KJ6YWD to JIM via KRDG* KBANN KJOHN KBULN WOODY ctl UI^ pid=F0(Text) len 22 18:16:13.543344",
+      "yooooooooo hellooooooo"
+    ]
+  },
+  "kiss": {
+    "client_automatic_retry": false,
+    "client_retry_count": 0,
+    "endpoint": "127.0.0.1:8001",
+    "requests_sent": 1,
+    "same_connection_rx": true,
+    "socket_sendall_calls": 1
+  },
+  "phase": "P2",
+  "product": "YWD-MMDVM-TNC",
+  "qualification": "ONE_SHOT_TCP_KISS_TX_AND_SAME_CONNECTION_RX_RECOVERY_PHYSICAL",
+  "qualified_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+  "qualified_local_date": "2026-09-07",
+  "qualified_product_commit": "c9e1cfe051326643eb16093f79e65fa272d29796",
+  "predecessor_p1_evidence_commit": "835c6c0721cd2722dfde98d7e22d9547c7f43d14",
+  "radio": {
+    "frequency_hz": 145050000,
+    "persistent_tx_enabled": false,
+    "qualification_tx_authority": "TEMPORARY_IN_MEMORY",
+    "tx_power": 200
+  },
+  "rx_recovery": {
+    "pre_return_rx_drained_kiss_bytes": 18,
+    "return_rx_baseline_decoded_frames": 1,
+    "same_kiss_connection": true,
+    "observed_frame": {
+      "destination": "JIM",
+      "frame_hex": "94929a404040e096946cb2ae886096a4888e4040609684829c9c406096949e909c40609684aa989c4060ae9e9e88b2406103f0796f6f6f6f6f6f6f6f6f2068656c6c6f6f6f6f6f6f6f",
+      "frame_type": "UI",
+      "information": "yooooooooo hellooooooo",
+      "path": [
+        "KRDG",
+        "KBANN",
+        "KJOHN",
+        "KBULN",
+        "WOODY"
+      ],
+      "pid": "0xF0",
+      "source": "KJ6YWD"
+    }
+  },
+  "safety": {
+    "automatic_tx_retry": false,
+    "firmware_flash_performed": false,
+    "option_bytes_written": false,
+    "persistent_config_modified": false,
+    "persistent_tx_enabled": false,
+    "tx_request_limit": 1
+  },
+  "schema": 1,
+  "status": "PASS",
+  "tx_accounting": {
+    "baseline": {
+      "decoder_resets_after_tx": 0,
+      "ingress_admitted": 0,
+      "ingress_received": 0,
+      "queue_accepted": 0,
+      "queue_depth": 0,
+      "queue_dispatched": 0,
+      "runtime_tx_dispatches": 0
+    },
+    "deltas": {
+      "decoder_resets_after_tx": 1,
+      "queue_accepted": 1,
+      "queue_dispatched": 1,
+      "runtime_tx_dispatches": 1
+    },
+    "hold": {
+      "dispatches_after_hold": 1,
+      "seconds": 3
+    },
+    "post_tx": {
+      "decoder_resets_after_tx": 1,
+      "decoded_rx_frames": 0,
+      "ingress_admitted": 1,
+      "ingress_received": 1,
+      "queue_accepted": 1,
+      "queue_depth": 0,
+      "queue_dispatched": 1,
+      "runtime_tx_dispatches": 1
+    },
+    "subscriber_drops": 0
+  },
+  "tx_frame": {
+    "destination": "YWD127",
+    "frame_hex": "b2ae8862646ee096946cb2ae887503f05957442d4d4d44564d2d544e4320503220312f31",
+    "frame_type": "UI",
+    "information": "YWD-MMDVM-TNC P2 1/1",
+    "pid": "0xF0",
+    "source": "KJ6YWD-10"
+  }
+}
