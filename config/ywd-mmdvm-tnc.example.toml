@@ -1,5 +1,10 @@
 # YWD-MMDVM-TNC example configuration
-# Safe default: RF transmission disabled.
+# Safe defaults: RF transmission disabled; network listeners loopback-only.
+#
+# For an explicitly trusted LAN KISS deployment, 0.0.0.0 is accepted only
+# when allow_wildcard_bind=true in that same listener section. 0.0.0.0 binds
+# every IPv4 interface, so use a host firewall if the machine has any
+# untrusted/public interface.
 
 [hardware]
 target = "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
@@ -20,11 +25,13 @@ slottime_ms = 100
 enabled = true
 listen = "127.0.0.1"
 port = 8001
+allow_wildcard_bind = false
 
 [agw]
 enabled = true
 listen = "127.0.0.1"
 port = 8000
+allow_wildcard_bind = false
 raw_only = true
 
 [firmware]

@@ -1,4 +1,4 @@
-name: p2-pre-rf-ci
+name: p3-lan-kiss-ci
 
 on:
   push:
@@ -29,8 +29,8 @@ jobs:
           python -m pip install --no-deps ./vendor/ywd-1278
           python -m pip install --no-deps -e .
 
-      - name: P2 pre-RF host contract
-        run: bash scripts/check-p2-pre-rf.sh
+      - name: P3 LAN KISS host contract
+        run: bash scripts/check-p3-lan-kiss.sh
 
       - name: Installed firmware profile CLI is hardware inert
         run: ywd-tnc-fw --profile firmware/product-ax25r4.json show

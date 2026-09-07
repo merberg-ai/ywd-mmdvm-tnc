@@ -26,7 +26,9 @@ class ConfigTests(unittest.TestCase):
         self.assertFalse(config.tx_enabled)
         self.assertEqual(config.frequency_hz, 145_050_000)
         self.assertEqual(config.kiss.listen, "127.0.0.1")
+        self.assertFalse(config.kiss.allow_wildcard_bind)
         self.assertEqual(config.agw.listen, "127.0.0.1")
+        self.assertFalse(config.agw.allow_wildcard_bind)
         self.assertTrue(config.agw_raw_only)
 
     def test_private_lan_bind_is_explicitly_allowed(self) -> None:
@@ -35,8 +37,39 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.kiss.listen, "192.168.1.50")
         self.assertEqual(config.agw.listen, "192.168.1.50")
 
-    def test_wildcard_bind_is_rejected(self) -> None:
-        text = EXAMPLE.read_text().replace('listen = "127.0.0.1"', 'listen = "0.0.0.0"')
+    def test_wildcard_bind_is_rejected_without_opt_in(self) -> None:
+        text = EXAMPLE.read_text().replace(
+            'listen = "127.0.0.1"\nport = 8001',
+            'listen = "0.0.0.0"\nport = 8001',
+        )
+        with self.assertRaises(TNCConfigurationError):
+            self._load_text(text)
+
+    def test_kiss_wildcard_bind_is_allowed_with_explicit_opt_in(self) -> None:
+        text = EXAMPLE.read_text().replace(
+            'listen = "127.0.0.1"\nport = 8001\nallow_wildcard_bind = false',
+            'listen = "0.0.0.0"\nport = 8001\nallow_wildcard_bind = true',
+        )
+        config = self._load_text(text)
+        self.assertEqual(config.kiss.listen, "0.0.0.0")
+        self.assertTrue(config.kiss.allow_wildcard_bind)
+        self.assertEqual(config.agw.listen, "127.0.0.1")
+        self.assertFalse(config.tx_enabled)
+
+    def test_public_bind_is_rejected_even_with_wildcard_opt_in(self) -> None:
+        text = EXAMPLE.read_text().replace(
+            'listen = "127.0.0.1"\nport = 8001\nallow_wildcard_bind = false',
+            'listen = "8.8.8.8"\nport = 8001\nallow_wildcard_bind = true',
+        )
+        with self.assertRaises(TNCConfigurationError):
+            self._load_text(text)
+
+    def test_wildcard_opt_in_must_be_boolean(self) -> None:
+        text = EXAMPLE.read_text().replace(
+            "allow_wildcard_bind = false",
+            'allow_wildcard_bind = "yes"',
+            1,
+        )
         with self.assertRaises(TNCConfigurationError):
             self._load_text(text)
 

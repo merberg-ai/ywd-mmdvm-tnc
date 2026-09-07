@@ -27,6 +27,7 @@ class ListenerConfig:
     enabled: bool
     listen: str
     port: int
+    allow_wildcard_bind: bool = False
 
 
 @dataclass(frozen=True)
@@ -66,6 +67,13 @@ def _bool(table: dict, key: str) -> bool:
     return value
 
 
+def _optional_bool(table: dict, key: str, *, default: bool = False) -> bool:
+    value = table.get(key, default)
+    if not isinstance(value, bool):
+        raise TNCConfigurationError(f"{key} must be true or false")
+    return value
+
+
 def _int(table: dict, key: str) -> int:
     value = table.get(key)
     if isinstance(value, bool) or not isinstance(value, int):
@@ -93,6 +101,7 @@ def _listener(table: dict, label: str) -> ListenerConfig:
         enabled=_bool(table, "enabled"),
         listen=_string(table, "listen"),
         port=_int(table, "port"),
+        allow_wildcard_bind=_optional_bool(table, "allow_wildcard_bind"),
     )
     if not 1 <= config.port <= 65535:
         raise TNCConfigurationError(f"{label}.port must be 1..65535")
@@ -100,14 +109,22 @@ def _listener(table: dict, label: str) -> ListenerConfig:
         address = ipaddress.ip_address(config.listen)
     except ValueError as exc:
         raise TNCConfigurationError(
-            f"{label}.listen must be an explicit IPv4 loopback/private address"
+            f"{label}.listen must be an IPv4 loopback/private address or explicitly authorized 0.0.0.0"
         ) from exc
-    if address.version != 4 or not (address.is_loopback or address.is_private):
+    if address.version != 4:
+        raise TNCConfigurationError(f"{label}.listen must be IPv4")
+    if address.is_multicast:
+        raise TNCConfigurationError(f"{label}.listen may not be a multicast address")
+    if address.is_unspecified:
+        if config.listen != "0.0.0.0" or not config.allow_wildcard_bind:
+            raise TNCConfigurationError(
+                f"{label}.listen=0.0.0.0 requires {label}.allow_wildcard_bind=true"
+            )
+        return config
+    if not (address.is_loopback or address.is_private):
         raise TNCConfigurationError(
-            f"{label}.listen must be an IPv4 loopback/private address"
+            f"{label}.listen must be an IPv4 loopback/private address; public binds are not permitted"
         )
-    if address.is_unspecified or address.is_multicast:
-        raise TNCConfigurationError(f"{label}.listen may not be a wildcard or multicast address")
     return config
 
 
