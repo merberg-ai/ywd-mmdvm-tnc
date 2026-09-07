@@ -1,8 +1,8 @@
-name: dev-ci
+name: p1-pre-rf-ci
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, dev, "checkpoint/**"]
   pull_request:
 
 permissions:
@@ -21,9 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Verify qualified core pin
-        shell: bash
-        run: |
-          test "$(git -C vendor/ywd-1278 rev-parse HEAD)" = "c28c46c3478d7931af611923c92cd8f692a00858"
+        run: test "$(git -C vendor/ywd-1278 rev-parse HEAD)" = "c28c46c3478d7931af611923c92cd8f692a00858"
 
       - name: Install pinned core and product
         run: |
@@ -31,11 +29,11 @@ jobs:
           python -m pip install --no-deps ./vendor/ywd-1278
           python -m pip install --no-deps -e .
 
-      - name: Compile product layer
-        run: python -m compileall -q src/ywdtnc
+      - name: P1 pre-RF host contract
+        run: bash scripts/check-p1-pre-rf.sh
 
-      - name: Run modem-only contracts
-        run: python -m unittest discover -s tests -v
+      - name: Installed firmware profile CLI is hardware inert
+        run: ywd-tnc-fw --profile firmware/product-ax25r4.json show
 
-      - name: Framework self-test is RF inert
+      - name: Installed framework self-test is RF inert
         run: ywd-tncd --config config/ywd-mmdvm-tnc.example.toml --framework-self-test
