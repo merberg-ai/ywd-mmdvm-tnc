@@ -1,0 +1,32 @@
+# YWD-MMDVM-TNC example configuration
+# Safe default: RF transmission disabled.
+
+[hardware]
+target = "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
+
+[radio]
+device = "/dev/ttyAMA0"
+frequency_mhz = 145.050
+tx_power = 200
+tx_enabled = false
+
+[packet]
+baud = 1200
+txdelay_ms = 300
+persist = 63
+slottime_ms = 100
+
+[kiss]
+enabled = true
+listen = "127.0.0.1"
+port = 8001
+
+[agw]
+enabled = true
+listen = "127.0.0.1"
+port = 8000
+raw_only = true
+
+[firmware]
+required_identity = "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
+allow_automatic_flash = false

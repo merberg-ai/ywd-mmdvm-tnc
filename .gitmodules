@@ -1,0 +1,4 @@
+[submodule "vendor/ywd-1278"]
+	path = vendor/ywd-1278
+	url = https://github.com/merberg-ai/ywd-1278.git
+	branch = dev
