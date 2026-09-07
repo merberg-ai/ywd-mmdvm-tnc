@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ywd-mmdvm-tnc"
-version = "0.1.0a2"
+version = "0.1.0a3"
 description = "Dedicated TCP KISS / AGW raw 1200-baud AX.25 TNC for supported MMDVM_HS HATs"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -16,6 +16,7 @@ dependencies = []
 ywd-tncd = "ywdtnc.tncd:main"
 ywd-tnc-fw = "ywdtnc.firmware:main"
 ywd-tnc-rx-gate = "ywdtnc.rx_gate:main"
+ywd-tnc-p2-gate = "ywdtnc.p2_qualification:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
