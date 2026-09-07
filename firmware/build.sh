@@ -11,7 +11,10 @@ CORE="$ROOT/vendor/ywd-1278"
 EXPECTED_CORE="c28c46c3478d7931af611923c92cd8f692a00858"
 JOBS="${YWD_TNC_FIRMWARE_BUILD_JOBS:-}"
 
-[[ ${EUID:-$(id -u)} -ne 0 ]] || { ui_fail "Build firmware without sudo/root."; exit 2; }
+if [[ ${EUID:-$(id -u)} -eq 0 && "${YWD_TNC_INSTALLER_BUILD:-0}" != 1 ]]; then
+  ui_fail "Build firmware without sudo/root. The guided installer handles its own controlled build."
+  exit 2
+fi
 [[ -f "$PROFILE" ]] || { ui_fail "Product firmware profile is missing."; exit 2; }
 [[ -f "$CORE/firmware/build-packet-rssi-ywd1278.py" ]] || { ui_fail "Qualified modem core is not initialized."; exit 2; }
 

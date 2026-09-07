@@ -11,6 +11,7 @@ for script in \
   "$ROOT/installer/install.sh" \
   "$ROOT/installer/setup.sh" \
   "$ROOT/firmware/build.sh" \
+  "$ROOT/firmware/ensure.sh" \
   "$ROOT/firmware/probe.sh" \
   "$ROOT/firmware/flash.sh"; do
   bash -n "$script"
@@ -25,6 +26,8 @@ import sys
 root = Path(sys.argv[1])
 bootstrap = (root / "install.sh").read_text(encoding="utf-8")
 setup = (root / "installer/setup.sh").read_text(encoding="utf-8")
+ensure = (root / "firmware/ensure.sh").read_text(encoding="utf-8")
+build = (root / "firmware/build.sh").read_text(encoding="utf-8")
 ui = (root / "installer/lib/ui.sh").read_text(encoding="utf-8")
 service = (root / "systemd/ywd-mmdvm-tnc.service").read_text(encoding="utf-8")
 readme = (root / "README.md").read_text(encoding="utf-8")
@@ -40,7 +43,13 @@ assert 'ui_prompt_yes_no tx_answer "Enable RF transmit?" no' in setup
 assert 'listen = "$kiss_listen"' in setup
 assert 'allow_wildcard_bind = $wildcard' in setup
 assert 'WRITE-FIRMWARE-NOW' in setup
+assert 'firmware/ensure.sh' in setup
 assert 'firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4' in setup
+assert setup.index('firmware/ensure.sh') < setup.index('firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4')
+assert 'verify-artifact' in ensure
+assert 'firmware/build.sh' in ensure
+assert 'YWD_TNC_INSTALLER_BUILD=1' in ensure
+assert 'YWD_TNC_INSTALLER_BUILD' in build
 assert 'systemctl enable "$SERVICE"' in setup
 assert 'systemctl restart "$SERVICE"' in setup
 
@@ -65,6 +74,7 @@ assert 'ywd-1278.service' not in setup
 assert 'ywd-1278.service' in service
 
 print("PUBLIC_INSTALLER_UI_CONTRACT=PASS")
+print("PUBLIC_STOCK_HAT_AUTO_BUILD_CONTRACT=PASS")
 print("PUBLIC_CONFIG_SAFE_DEFAULTS=PASS")
 print("PUBLIC_SERVICE_BRANDING=PASS")
 print("PUBLIC_README_CONTRACT=PASS")
