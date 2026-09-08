@@ -42,6 +42,9 @@ def main() -> None:
     if git_blob(src, "version.h") != EXPECTED_VERSION_BLOB:
         raise SystemExit("version.h blob does not match pinned 7ff74ed source")
 
+    # checkout_source() intentionally creates Config.h for the target board.
+    # Treat it as build configuration, not a Stage 4 behavioral edit, but only
+    # when it is an exact copy of the pinned simplex MMDVM_HS_Hat template.
     if not config_path.is_file() or not config_template.is_file():
         raise SystemExit("expected simplex-HAT Config.h/template is missing")
     if config_path.read_bytes() != config_template.read_bytes():
@@ -57,6 +60,8 @@ def main() -> None:
     switch_old = """        switch (m_buffer[2U]) {\n          case MMDVM_GET_STATUS:\n"""
     switch_new = r'''        switch (m_buffer[2U]) {
           case MMDVM_YWD_CONTROL: {
+            // Stage 3 compatibility: an empty 0x56 request still returns the
+            // original unstructured PONG frame.
             if (m_len == 3U) {
               uint8_t reply[7U];
               reply[0U] = MMDVM_FRAME_START;
@@ -93,11 +98,11 @@ def main() -> None:
               reply[1U] = 9U;
               reply[2U] = MMDVM_YWD_CONTROL;
               reply[3U] = YWD_CTRL_GET_CAPS;
-              reply[4U] = 1U;
-              reply[5U] = YWD_DATA_MAX;
-              reply[6U] = 0x07U;
-              reply[7U] = 0x07U;
-              reply[8U] = 0x00U;
+              reply[4U] = 1U;            // YWD host protocol revision
+              reply[5U] = YWD_DATA_MAX;  // maximum Stage 4 data payload
+              reply[6U] = 0x07U;         // control + data echo + legacy ping
+              reply[7U] = 0x07U;         // TEXT + TELEMETRY + BLOB kinds
+              reply[8U] = 0x00U;         // reserved
               writeInt(1U, reply, 9);
             } else if (sub == YWD_CTRL_GET_INFO) {
               const char info[] = "YWD-MMDVM-STAGE4";
@@ -116,6 +121,7 @@ def main() -> None:
           }
 
           case MMDVM_YWD_DATA: {
+            // E0 LEN 57 SEQ KIND PAYLOAD_LEN PAYLOAD...
             if (m_len < 6U) {
               sendNAK(4U);
               break;
@@ -129,6 +135,8 @@ def main() -> None:
               break;
             }
 
+            // Stage 4 deliberately echoes a validated frame unchanged. This
+            // proves binary-safe bounded transport without touching RF state.
             uint8_t reply[38U];
             reply[0U] = MMDVM_FRAME_START;
             reply[1U] = m_len;
@@ -160,6 +168,8 @@ def main() -> None:
     if changed != expected:
         raise SystemExit(f"unexpected firmware files changed: {changed}")
 
+    # Re-check after the transformation so a future edit cannot piggyback on
+    # the allowed generated Config.h entry.
     if config_path.read_bytes() != config_template.read_bytes():
         raise SystemExit("Config.h changed during Stage 4 transform")
 
