@@ -2,7 +2,7 @@ name: ywd-mmdvm-tnc-ci
 
 on:
   push:
-    branches: [main, dev, "checkpoint/**"]
+    branches: [main, dev, "firmware/**", "checkpoint/**"]
   pull_request:
 
 permissions:
@@ -37,3 +37,47 @@ jobs:
 
       - name: Framework self-test remains RF inert
         run: ywd-tncd --config config/ywd-mmdvm-tnc.example.toml --framework-self-test
+
+  firmware-inrepo-equivalence:
+    if: startsWith(github.ref, 'refs/heads/firmware/') || startsWith(github.ref, 'refs/heads/checkpoint/firmware-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ARM firmware toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Verify exact in-repo migration inputs
+        run: bash scripts/check-firmware-inrepo-migration.sh
+
+      - name: Build qualified reference through pinned YWD-1278
+        run: |
+          python3 vendor/ywd-1278/firmware/build-packet-rssi-ywd1278.py --jobs 2
+          cp vendor/ywd-1278/firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin /tmp/ywd-1278-reference.bin
+
+      - name: Build qualified candidate from in-repo firmware inputs
+        run: |
+          rm -rf firmware/out
+          python3 firmware/build-qualified-inrepo.py --jobs 2
+
+      - name: Require byte-identical qualified artifact
+        run: |
+          candidate=firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin
+          expected=b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616
+          cmp /tmp/ywd-1278-reference.bin "$candidate"
+          test "$(stat -c %s "$candidate")" = 59892
+          test "$(sha256sum /tmp/ywd-1278-reference.bin | awk '{print $1}')" = "$expected"
+          test "$(sha256sum "$candidate" | awk '{print $1}')" = "$expected"
+          echo FWM1_REFERENCE_VS_INREPO_BYTE_IDENTICAL=PASS
+          echo FWM1_QUALIFIED_SHA256_MATCH=PASS
+          echo HARDWARE_ACCESSED=NO
+          echo FLASH_WRITTEN=NO
+          echo RF_TRANSMITTED=NO
