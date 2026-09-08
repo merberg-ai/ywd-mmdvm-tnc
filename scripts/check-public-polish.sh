@@ -50,6 +50,11 @@ assert 'verify-artifact' in ensure
 assert 'firmware/build.sh' in ensure
 assert 'YWD_TNC_INSTALLER_BUILD=1' in ensure
 assert 'YWD_TNC_INSTALLER_BUILD' in build
+assert 'SUDO_USER' in build
+assert 'git -c safe.directory=' in build and 'archive --format=tar HEAD' in build
+assert 'sudo -H -u "$build_user" -- python3' in build
+assert 'chown -R "$build_user:$build_group" "$BUILD_WORKSPACE"' in build
+assert 'BUILD_EXECUTED_AS_ROOT=NO' in build
 assert 'systemctl enable "$SERVICE"' in setup
 assert 'systemctl restart "$SERVICE"' in setup
 
@@ -75,6 +80,7 @@ assert 'ywd-1278.service' in service
 
 print("PUBLIC_INSTALLER_UI_CONTRACT=PASS")
 print("PUBLIC_STOCK_HAT_AUTO_BUILD_CONTRACT=PASS")
+print("PUBLIC_NONROOT_FIRMWARE_BUILD_CONTRACT=PASS")
 print("PUBLIC_SCRIPT_EXECUTION_CONTRACT=PASS")
 print("PUBLIC_CONFIG_SAFE_DEFAULTS=PASS")
 print("PUBLIC_SERVICE_BRANDING=PASS")
