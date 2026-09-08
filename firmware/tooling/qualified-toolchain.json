@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "phase": "FWM1",
+  "purpose": "Byte-identical reproduction of the physically-qualified YWD-MMDVM-TNC AX25R4 firmware artifact",
+  "build_environment": {
+    "distribution": "Debian trixie",
+    "container_image": "debian:trixie-slim",
+    "container_digest": "sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132",
+    "packages": {
+      "gcc-arm-none-eabi": "15:14.2.rel1-1",
+      "binutils-arm-none-eabi": "2.44-3+23+b1",
+      "libnewlib-arm-none-eabi": "4.5.0.20241231-1",
+      "libnewlib-dev": "4.5.0.20241231-1",
+      "libstdc++-arm-none-eabi-dev": "15:14.2.rel1-1+29",
+      "libstdc++-arm-none-eabi-newlib": "15:14.2.rel1-1+29",
+      "make": "4.4.1-2",
+      "git": "1:2.47.3-0+deb13u1"
+    },
+    "arm_gcc_full_version": "14.2.1"
+  },
+  "qualified_artifact": {
+    "size_bytes": 59892,
+    "sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+    "identity": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
+  },
+  "source_provenance": {
+    "ywd_1278_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+    "qualified_builder_blob": "5abf2db22e462be844207eb776fed9bae242dcb3",
+    "upstream_mmdvm_hs_commit": "7ff74ed1ba663a282edcbbb5e0ec3d7132e6f2f5",
+    "stm32f10x_lib_commit": "1debc23063f3942608e2bd62d04d5e1249c47fa3",
+    "engineering_provenance_commit": "69309644da839522102e393e66093378544869ea"
+  },
+  "qualification_context": {
+    "physical_stock_hat_installation_date": "2026-09-07",
+    "fwm1_ci_equivalence_date": "2026-09-08",
+    "reference_vs_inrepo_byte_identical": true
+  },
+  "safety": {
+    "hardware_access": false,
+    "flash_written": false,
+    "rf_transmitted": false
+  }
+}

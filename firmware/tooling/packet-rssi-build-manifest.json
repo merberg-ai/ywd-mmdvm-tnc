@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "profile_id": "0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse",
+  "phase": "0C-P2",
+  "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021",
+  "upstream": {
+    "repository": "https://github.com/juribeparada/MMDVM_HS.git",
+    "commit": "7ff74ed1ba663a282edcbbb5e0ec3d7132e6f2f5",
+    "short_commit": "7ff74ed",
+    "submodules": {
+      "STM32F10X_Lib": "1debc23063f3942608e2bd62d04d5e1249c47fa3"
+    },
+    "config_template": "configs/MMDVM_HS_Hat.h",
+    "config_template_blob": "1c526b41dd96ea68823f2e83442a8a76fd59590a",
+    "version_blob": "4239a854ec09ee90847468f931e1455ee461e2de",
+    "makefile_blob": "c73834e9734e4b74bd375cb98ce5144c31134de6",
+    "build_script": "scripts/build_fw.sh",
+    "build_script_blob": "30257c0aea66695ed32877b8688daa835ee4f0e2"
+  },
+  "engineering": {
+    "source": "vendored",
+    "vendored_root": "firmware/vendor/ywd-mmdvm",
+    "repository": "merberg-ai/ywd-mmdvm",
+    "remote": "https://github.com/merberg-ai/ywd-mmdvm.git",
+    "baseline_qualified_commit": "d25180ad663d781b761c525d1e699e7b052d6214",
+    "commit": "69309644da839522102e393e66093378544869ea",
+    "baseline_qualification": "docs/qualifications/ax25-5b-bidirectional-kiss-qualified-2026-09-01.md",
+    "baseline_qualification_blob": "42b4f22ba22050223fa9179b8d55045356e79a9d",
+    "files": {
+      "firmware/stage4/apply_stage4.py": "2fa3a3ca4b8470a90de58534cbe20646ea390c9a",
+      "firmware/ax25-classic1/AX25AFSKTX.cpp": "95cbab582aa359854a58e3d7b456ae4ada0dfddf",
+      "firmware/ax25-classic1/AX25AFSKTX.h": "ca187f153c2139e580c31b5cf635d1393cef5769",
+      "firmware/ax25-classic1/apply_ax25_classic1.py": "91eccb3a196f731690e3e275041bbb1b73b18ed1",
+      "firmware/ax25-classic1/apply_ax25_classic1_diag.py": "ca885602a4359991bdfa7f1a976d47e0ae3be3e7",
+      "firmware/ax25-classic1/apply_ax25_classic1_continuity.py": "5796655bc91566b3c6c2627ea878a712720fbc7d",
+      "firmware/ax25-classic1/apply_ax25_classic1_reserve.py": "04ded4879046a508cb3e179d0499cc6faec3784f",
+      "firmware/ax25-rx1/AX25AFSKRX.cpp": "cf811dd953fdbbb7218eeb30079f8da12d04871a",
+      "firmware/ax25-rx1/AX25AFSKRX.h": "c6059997d66d30af59a74a5085e4a60a7d50a90e",
+      "firmware/ax25-rx1/apply_ax25_rx1.py": "3e6916e374bd1510d6acf80b3b0159c5666179a0",
+      "firmware/ax25-rx2/apply_ax25_rx2.py": "590a044b057ddb56d7b47ec3a42de584d1c4826d",
+      "firmware/ax25-rx3/apply_ax25_rx3.py": "bd49a33d62c025039e8d6f7a49cffb558eff1bda",
+      "firmware/ax25-rx4/apply_ax25_rx4_rssi.py": "f69382dc0dbdb5c9d04bf2b04ea197d2840e5e03"
+    },
+    "transform_order": [
+      "firmware/stage4/apply_stage4.py",
+      "firmware/ax25-classic1/apply_ax25_classic1.py",
+      "firmware/ax25-classic1/apply_ax25_classic1_diag.py",
+      "firmware/ax25-classic1/apply_ax25_classic1_continuity.py",
+      "firmware/ax25-classic1/apply_ax25_classic1_reserve.py",
+      "firmware/ax25-rx1/apply_ax25_rx1.py",
+      "firmware/ax25-rx2/apply_ax25_rx2.py",
+      "firmware/ax25-rx3/apply_ax25_rx3.py",
+      "firmware/ax25-rx4/apply_ax25_rx4_rssi.py"
+    ]
+  },
+  "build": {
+    "make_target": "hs",
+    "stm32_hse_hz": 8000000,
+    "osc_override": false,
+    "binary_path": "bin/mmdvm_f1.bin",
+    "max_artifact_bytes": 131072
+  },
+  "rf": {
+    "chip": "ADF7021",
+    "tcxo_hz": 14745600
+  },
+  "telemetry": {
+    "namespace": "YWD_RX",
+    "subcommand": 5,
+    "source": "ADF7021 register-7 RSSI ADC readback",
+    "wire_encoding": "uint16-le-raw-magnitude",
+    "requires_active_ax25_rx": true,
+    "blocked_during_tx": true,
+    "carrier_threshold_selected": false
+  },
+  "branding": {
+    "product_series": "AX25R4",
+    "firmware_version": "0.1.0-alpha1",
+    "legacy_version_token": "YWD-AX25R4-v0.2.3",
+    "legacy_info": "YWD-MMDVM-AX25R4",
+    "expected_info": "YWD-1278-AX25R4",
+    "expected_identity": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
+  },
+  "safety": {
+    "hardware_access": false,
+    "flash_enabled": false,
+    "option_bytes_permitted": false,
+    "rf_transmit_possible_during_build": false
+  }
+}
