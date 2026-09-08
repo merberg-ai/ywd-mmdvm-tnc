@@ -20,6 +20,7 @@ python3 -m py_compile "$ROOT/firmware/flash_ui.py" "$ROOT/firmware/hat_control.p
 
 python3 - "$ROOT" <<'PY'
 from pathlib import Path
+import json
 import tomllib
 import sys
 
@@ -34,6 +35,8 @@ service = (root / "systemd/ywd-mmdvm-tnc.service").read_text(encoding="utf-8")
 readme = (root / "README.md").read_text(encoding="utf-8")
 with (root / "config/ywd-mmdvm-tnc.example.toml").open("rb") as fh:
     cfg = tomllib.load(fh)
+with (root / "qualification/public-stock-hat-install-physical-2026-09-07.json").open(encoding="utf-8") as fh:
+    stock_hat = json.load(fh)
 
 assert 'REF="${YWD_TNC_REF:-main}"' in bootstrap
 assert 'installer/setup.sh' in bootstrap
@@ -78,6 +81,21 @@ assert 'Manual installation from Git' in readme
 assert 'LinBPQ example' in readme
 assert 'Firmware' in readme
 assert 'qualification/' in readme
+assert 'public-stock-hat-install-physical-2026-09-07.json' in readme
+assert 'Testing the development branch' not in readme
+assert 'YWD_TNC_REF=dev' not in readme
+assert 'git clone --recursive -b dev' not in readme
+
+assert stock_hat["status"] == "PASS"
+assert stock_hat["product"] == "YWD-MMDVM-TNC"
+assert stock_hat["code_under_test_commit"] == "ec73ff79184bcb8d3880a60ed54f1398eabc154c"
+assert stock_hat["product_version"] == "0.1.0a9"
+assert stock_hat["firmware_build"]["reproducible_builds"] == "PASS"
+assert stock_hat["stock_backup"]["golden_stock_sha256_match"] is True
+assert stock_hat["stock_backup"]["flash_written_before_final_confirmation"] is False
+assert stock_hat["operator_reported_completion"]["installer_completed_successfully"] == "PASS"
+assert stock_hat["operator_reported_completion"]["linbpq_receive_over_kiss"] == "PASS"
+assert stock_hat["operator_reported_completion"]["linbpq_transmit_over_kiss"] == "PASS"
 
 assert 'ywd-1278.service' not in bootstrap
 assert 'ywd-1278.service' not in setup
@@ -91,6 +109,7 @@ print("PUBLIC_TTY_FLASH_CONFIRMATION_CONTRACT=PASS")
 print("PUBLIC_CONFIG_SAFE_DEFAULTS=PASS")
 print("PUBLIC_SERVICE_BRANDING=PASS")
 print("PUBLIC_README_CONTRACT=PASS")
+print("PUBLIC_STOCK_HAT_PHYSICAL_EVIDENCE_CONTRACT=PASS")
 print("RF_RUNTIME_BEHAVIOR_CHANGED=NO")
 PY
 

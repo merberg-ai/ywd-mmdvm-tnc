@@ -26,7 +26,7 @@ acknowledgements, retries, routing, BBS/node features, beacons, and application
 logic belong to the program using KISS. One `ywd-tncd` process owns the HAT UART
 and provides the shared RX/TX modem path.
 
-## Current hardware support
+## Qualified hardware support
 
 The physically-qualified target is:
 
@@ -43,16 +43,32 @@ that are legal and appropriate for their station and location.
 
 ## Quick install
 
-On a fresh Raspberry Pi OS / Debian-family system, the guided installer can be
-started with one command:
+On a fresh Raspberry Pi OS / Debian-family system, start the guided installer
+with one command:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/merberg-ai/ywd-mmdvm-tnc/main/install.sh | sudo bash
 ```
 
 The installer keeps detailed command output in `/var/log/ywd-mmdvm-tnc/` and
-shows only the current step, progress, warnings, and final result in the
+shows only the current step, progress, warnings, prompts, and final result in the
 terminal.
+
+The guided path performs the complete installation workflow:
+
+1. installs the required host and STM32 toolchain packages;
+2. initializes and verifies the exact pinned modem/firmware source;
+3. installs YWD-MMDVM-TNC into `/opt/ywd-mmdvm-tnc`;
+4. creates `/etc/ywd-mmdvm-tnc/config.toml` from the operator's answers;
+5. verifies an existing qualified firmware artifact or reproducibly builds it
+   twice as a non-root user and checks the exact expected SHA-256;
+6. identifies the HAT and, when starting from recognized stock firmware,
+   captures and verifies two independent full-flash rollback reads;
+7. requires the explicit `WRITE-FIRMWARE-NOW` confirmation immediately before
+   any stock-to-product firmware write;
+8. reads the programmed bytes back independently and verifies the running
+   qualified firmware identity;
+9. enables and starts `ywd-mmdvm-tnc.service` and prints the KISS endpoint.
 
 During setup it asks for:
 
@@ -64,8 +80,8 @@ During setup it asks for:
 - whether to back up / verify / install the qualified HAT firmware — default yes
 
 A real firmware write is never silent. Before writing STM32 main flash the tool
-first verifies a golden stock rollback backup and then requires the operator to
-type:
+first verifies a protected stock rollback backup and then requires the operator
+to type:
 
 ```text
 WRITE-FIRMWARE-NOW
@@ -74,27 +90,10 @@ WRITE-FIRMWARE-NOW
 After successful setup the installer enables and starts
 `ywd-mmdvm-tnc.service` and prints the configured KISS endpoint.
 
-### Testing the development branch
-
-Before a release is promoted to `main`, the same bootstrap can be tested from
-`dev` with:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/merberg-ai/ywd-mmdvm-tnc/dev/install.sh | sudo env YWD_TNC_REF=dev bash
-```
-
 ## Manual installation from Git
 
 ```bash
 git clone --recursive https://github.com/merberg-ai/ywd-mmdvm-tnc.git
-cd ywd-mmdvm-tnc
-sudo ./installer/setup.sh
-```
-
-For development:
-
-```bash
-git clone --recursive -b dev https://github.com/merberg-ai/ywd-mmdvm-tnc.git
 cd ywd-mmdvm-tnc
 sudo ./installer/setup.sh
 ```
@@ -105,6 +104,7 @@ The lower-level scripts remain available for manual maintenance:
 ```text
 installer/bootstrap.sh   install OS/toolchain dependencies
 installer/install.sh     install/update product files and systemd service
+firmware/ensure.sh       verify or build the exact qualified firmware artifact
 firmware/build.sh        reproducibly build the exact qualified firmware
 firmware/probe.sh        verify the running HAT firmware without configuring RF
 firmware/flash.sh        probe, back up, verify, or flash through the qualified path
@@ -164,7 +164,10 @@ raw_only = true
 ```
 
 The installed file also contains the exact qualified firmware identity and the
-hard-disabled automatic-flash setting used by the runtime safety checks.
+hard-disabled automatic-flash setting used by the runtime safety checks. The
+installer writes only YWD-MMDVM-TNC hardware, radio, packet, listener, and
+firmware settings; it does not write LinBPQ/BPQ, node, BBS, routing, or other
+application configuration.
 
 ### LAN KISS access
 
@@ -242,7 +245,7 @@ MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU
 ```
 
 That string is not cosmetic: changing it would produce a different firmware
-binary and discard the exact byte-level qualification evidence. All new product
+binary and discard the exact byte-level qualification evidence. All product
 paths, services, commands, installer UX, state, and documentation use the
 **YWD-MMDVM-TNC** name while the immutable firmware identity remains preserved
 for provenance.
@@ -258,6 +261,7 @@ Firmware builds are intentionally non-root:
 The build wrapper runs the pinned deterministic builder twice and requires both
 builds to match before verifying the expected artifact hash. Build details are
 written to the displayed log file. No HAT, GPIO, flash, or RF access occurs.
+The guided installer performs this automatically when the artifact is absent.
 
 ### Probe the installed firmware
 
@@ -282,6 +286,14 @@ byte-identical and must match the physically-qualified stock SHA-256 before the
 backup is accepted.
 
 ### Install / verify the qualified firmware manually
+
+If the qualified artifact has not been built yet:
+
+```bash
+./firmware/build.sh
+```
+
+Then run the qualified deployment path:
 
 ```bash
 sudo ./firmware/flash.sh flash --authorize FLASH-QUALIFIED-AX25R4
@@ -320,9 +332,15 @@ The current stack has passed physical tests for:
 - no automatic modem-layer TX retry
 - remote LAN TCP KISS operation
 - real LinBPQ bidirectional interoperability and sustained connected-mode traffic
+- the complete fresh-stock-HAT public installation path: one-command bootstrap,
+  guided configuration, reproducible non-root firmware build, exact artifact
+  verification, protected two-pass stock backup, explicit flash confirmation,
+  stock-to-qualified firmware deployment, service startup, and working LinBPQ
+  TX/RX afterward
 
 Machine-readable evidence is kept in `qualification/` and exact historical
-checkpoint branches are retained in Git.
+checkpoint branches are retained in Git. The public stock-HAT installer record
+is `qualification/public-stock-hat-install-physical-2026-09-07.json`.
 
 ## License
 

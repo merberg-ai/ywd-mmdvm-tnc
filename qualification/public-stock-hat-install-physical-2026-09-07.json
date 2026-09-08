@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "product": "YWD-MMDVM-TNC",
+  "phase": "PUBLIC-RELEASE-POLISH",
+  "qualification": "STOCK_HAT_BOOTSTRAP_BUILD_BACKUP_FLASH_AND_LINBPQ_INTEROPERABILITY_PHYSICAL",
+  "status": "PASS",
+  "qualified_local_date": "2026-09-07",
+  "code_under_test_commit": "ec73ff79184bcb8d3880a60ed54f1398eabc154c",
+  "product_version": "0.1.0a9",
+  "qualified_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+  "hardware": {
+    "host": "Raspberry Pi 5 Model B Rev 1.0",
+    "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021",
+    "initial_firmware_class": "STOCK",
+    "initial_firmware_identity": "MMDVM_HS_Hat-v1.6.1 20230526 14.7456MHz ADF7021 FW by CA6JAU GitID #7ff74ed"
+  },
+  "installation": {
+    "entrypoint": "curl bootstrap from the dev branch using YWD_TNC_REF=dev",
+    "guided_configuration": "PASS",
+    "kiss_access": "LAN",
+    "kiss_bind": "0.0.0.0",
+    "kiss_port": 8001,
+    "tx_enabled": true,
+    "tx_profile": "145.050 MHz / power 200",
+    "agw_enabled": false
+  },
+  "firmware_build": {
+    "result": "PASS",
+    "executed_as_root": false,
+    "build_user": "original sudo user",
+    "reproducible_builds": "PASS",
+    "artifact_size_bytes": 59892,
+    "artifact_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+    "hardware_access_during_build": false,
+    "flash_written_during_build": false,
+    "rf_transmitted_during_build": false
+  },
+  "stock_backup": {
+    "result": "PASS",
+    "read_passes": 2,
+    "two_pass_byte_identical": true,
+    "full_main_flash_bytes": 131072,
+    "sha256": "4981b35b2d50ada0b09322d9de19dd58a0cbd49eb005693499d1acae92f9d684",
+    "golden_stock_sha256_match": true,
+    "stm32_bootloader_version": "0x22",
+    "stm32_device_id": "0x0410",
+    "option_bytes_read_or_written": false,
+    "flash_written_before_final_confirmation": false
+  },
+  "write_gate": {
+    "authorization_token": "FLASH-QUALIFIED-AX25R4",
+    "final_interactive_confirmation": "WRITE-FIRMWARE-NOW",
+    "automatic_flash": false
+  },
+  "operator_reported_completion": {
+    "installer_completed_successfully": "PASS",
+    "qualified_firmware_flashed": "PASS",
+    "qualified_firmware_running": "PASS",
+    "ywd_mmdvm_tnc_service_running": "PASS",
+    "linbpq_receive_over_kiss": "PASS",
+    "linbpq_transmit_over_kiss": "PASS",
+    "observation": "flashed, ran, and LinBPQ TX/RX worked as expected"
+  },
+  "scope": {
+    "one_command_bootstrap": "PASS",
+    "dependency_and_toolchain_setup": "PASS",
+    "guided_product_configuration": "PASS",
+    "non_root_reproducible_firmware_build": "PASS",
+    "protected_stock_backup": "PASS",
+    "explicit_interactive_flash_gate": "PASS",
+    "stock_to_qualified_firmware_install": "PASS",
+    "installed_service_start": "PASS",
+    "real_linbpq_bidirectional_operation": "PASS"
+  },
+  "evidence_sources": {
+    "installer_log": "install-20260907-170613.log proves the build, artifact hash, stock identity, bootloader/device identity, two-pass full-flash backup, golden stock SHA match, and no flash write before the final confirmation gate",
+    "operator_report": "successful completion after the TTY confirmation fix; firmware flashed and ran; LinBPQ TX/RX worked as expected"
+  },
+  "notes": "The uploaded installer log ends at the pre-write TTY failure from the immediately preceding 0.1.0a8 candidate. Final post-write success for 0.1.0a9 is recorded from the operator's live qualification report rather than an uploaded post-success log. No exact frame count is asserted."
+}
