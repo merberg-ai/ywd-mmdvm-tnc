@@ -12,8 +12,10 @@ import tempfile
 root = Path(sys.argv[1])
 manifest_path = root / "firmware/tooling/packet-rssi-build-manifest.json"
 toolchain_path = root / "firmware/tooling/qualified-toolchain.json"
+profile_path = root / "firmware/product-ax25r4.json"
 manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
 toolchain = json.loads(toolchain_path.read_text(encoding="utf-8"))
+profile = json.loads(profile_path.read_text(encoding="utf-8"))
 
 assert manifest["schema"] == 1
 assert manifest["phase"] == "0C-P2"
@@ -52,10 +54,11 @@ assert toolchain["source_provenance"]["engineering_provenance_commit"] == manife
 assert toolchain["qualification_context"]["reference_vs_inrepo_byte_identical"] is True
 assert toolchain["safety"] == {"hardware_access": False, "flash_written": False, "rf_transmitted": False}
 
-# Preserve the exact YWD-1278 tooling blobs that define the qualified build.
+# Preserve the exact FWM1 tooling blobs that define the qualified build.
 expected_tooling = {
     "firmware/build-qualified-inrepo.py": "5abf2db22e462be844207eb776fed9bae242dcb3",
     "firmware/tooling/packet-rssi-build-manifest.json": "c74f13fe0ae3ee786833f0f7a737111829027301",
+    "firmware/tooling/qualified-toolchain.json": "56d265cd2523dcdb7fd5f3634142e8c6407bef73",
     "firmware/tooling/apply_packet_rssi_branding.py": "7bb4c158d3c63d49624a05c0339fbb8c43c401e7",
     "firmware/tooling/inspect_artifact.py": "6808d5a28fb033a6f916a014a0db90aad5ccc589",
     "firmware/tooling/materialize_vendored_engineering.py": "7b05b395600c1d59c46d5a324488f337813c1542",
@@ -74,7 +77,7 @@ for rel, expected in manifest["engineering"]["files"].items():
 
 # Exercise the copied materializer itself: it must re-hash all 13 engineering
 # inputs and materialize only verified bytes into a clean destination.
-with tempfile.TemporaryDirectory(prefix="ywd-tnc-fwm1-") as td:
+with tempfile.TemporaryDirectory(prefix="ywd-tnc-fwm2-") as td:
     subprocess.check_call([
         sys.executable,
         str(root / "firmware/tooling/materialize_vendored_engineering.py"),
@@ -89,21 +92,45 @@ assert 'git(seed, "submodule", "update", "--init", "--recursive"' in builder
 assert 'if os.geteuid() == 0' in builder
 assert 'independent RSSI firmware builds are not byte-identical' in builder
 
-# FWM1 is parallel-only: the physically-qualified production installer/build
-# path must still point at the pinned YWD-1278 submodule until equivalence is
-# proven and a later cutover phase is explicitly authorized.
+# FWM2 production firmware-build cutover: build.sh must consume only the
+# in-repo qualified builder/tooling/engineering inputs. The YWD-1278 submodule
+# remains available to the modem runtime and flash-support path in this phase,
+# but must no longer be a firmware build input.
 production_build = (root / "firmware/build.sh").read_text(encoding="utf-8")
-assert 'CORE="$ROOT/vendor/ywd-1278"' in production_build
-assert 'build-packet-rssi-ywd1278.py' in production_build
+assert 'BUILDER="$ROOT/firmware/build-qualified-inrepo.py"' in production_build
+assert 'TOOLCHAIN="$ROOT/firmware/tooling/qualified-toolchain.json"' in production_build
+assert 'firmware/build-qualified-inrepo.py' in production_build
+assert 'firmware/tooling' in production_build
+assert 'firmware/vendor' in production_build
+assert 'sudo -H -u "$build_user" -- python3 "$build_root/firmware/build-qualified-inrepo.py"' in production_build
+assert 'FIRMWARE_BUILD_SOURCE=IN_REPO' in production_build
+assert 'YWD1278_FIRMWARE_BUILDER_INVOKED=NO' in production_build
+assert 'build-packet-rssi-ywd1278.py' not in production_build
+assert 'CORE="$ROOT/vendor/ywd-1278"' not in production_build
+assert 'archive --format=tar HEAD' not in production_build
 
-print("FWM1_ENGINEERING_BLOBS_EXACT=PASS")
-print("FWM1_TOOLING_BLOBS_EXACT=PASS")
-print("FWM1_BUILDER_BLOB_EXACT=PASS")
-print("FWM1_QUALIFIED_TOOLCHAIN_PROVENANCE=PASS")
-print("FWM1_MATERIALIZER=PASS")
-print("FWM1_PARALLEL_BUILDER_PRESENT=PASS")
-print("PRODUCTION_FIRMWARE_BUILD_PATH_CHANGED=NO")
-print("INSTALLER_FIRMWARE_PATH_CHANGED=NO")
+assert profile["vendor_build_script"] == "firmware/build-qualified-inrepo.py"
+assert profile["artifact_relative_path"].startswith("firmware/out/0c-p2-rssi-ax25r4-")
+assert profile["artifact_size_bytes"] == 59892
+assert profile["artifact_sha256"] == toolchain["qualified_artifact"]["sha256"]
+assert profile["firmware_engineering_manifest"] == "firmware/tooling/packet-rssi-build-manifest.json"
+assert profile["qualified_toolchain_manifest"] == "firmware/tooling/qualified-toolchain.json"
+
+# Runtime composition is intentionally not migrated in FWM2.
+installer = (root / "installer/install.sh").read_text(encoding="utf-8")
+flash = (root / "firmware/qualified_flash.py").read_text(encoding="utf-8")
+assert 'vendor/ywd-1278' in installer
+assert 'VENDOR_FW = ROOT / "vendor" / "ywd-1278" / "firmware"' in flash
+
+print("FWM2_ENGINEERING_BLOBS_EXACT=PASS")
+print("FWM2_TOOLING_BLOBS_EXACT=PASS")
+print("FWM2_BUILDER_BLOB_EXACT=PASS")
+print("FWM2_QUALIFIED_TOOLCHAIN_PROVENANCE=PASS")
+print("FWM2_MATERIALIZER=PASS")
+print("FWM2_PRODUCTION_FIRMWARE_BUILD_SOURCE=IN_REPO")
+print("FWM2_YWD1278_FIRMWARE_BUILDER_REACHABLE_FROM_BUILD_SH=NO")
+print("FWM2_MODEM_RUNTIME_DEPENDENCY_CHANGED=NO")
+print("INSTALLER_FLASH_BEHAVIOR_CHANGED=NO")
 print("HARDWARE_ACCESSED=NO")
 print("FLASH_WRITTEN=NO")
 print("RF_TRANSMITTED=NO")

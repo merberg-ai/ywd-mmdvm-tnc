@@ -19,6 +19,8 @@ class FirmwareProfileTests(unittest.TestCase):
         self.assertEqual(profile.series, "AX25R4")
         self.assertEqual(profile.qualified_core_commit, "c28c46c3478d7931af611923c92cd8f692a00858")
         self.assertEqual(profile.target_id, "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021")
+        self.assertEqual(profile.vendor_build_script, "firmware/build-qualified-inrepo.py")
+        self.assertTrue(profile.artifact_relative_path.startswith("firmware/out/0c-p2-rssi-ax25r4-"))
         self.assertEqual(profile.artifact_size_bytes, 59892)
         self.assertEqual(
             profile.artifact_sha256,

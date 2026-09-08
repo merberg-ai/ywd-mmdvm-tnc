@@ -149,10 +149,10 @@ def load_profile(path: str | Path) -> FirmwareProfile:
         raise FirmwareProfileError("firmware profile core pin does not match product core pin")
     if profile.qualified_core_tree != QUALIFIED_CORE_TREE:
         raise FirmwareProfileError("firmware profile core tree does not match product core tree")
-    if profile.vendor_build_script != "vendor/ywd-1278/firmware/build-packet-rssi-ywd1278.py":
-        raise FirmwareProfileError("qualified vendor firmware build path changed")
-    if not profile.artifact_relative_path.startswith("vendor/ywd-1278/firmware/out/0c-p2-rssi-ax25r4-"):
-        raise FirmwareProfileError("qualified firmware artifact path changed")
+    if profile.vendor_build_script != "firmware/build-qualified-inrepo.py":
+        raise FirmwareProfileError("qualified in-repo firmware build path changed")
+    if not profile.artifact_relative_path.startswith("firmware/out/0c-p2-rssi-ax25r4-"):
+        raise FirmwareProfileError("qualified in-repo firmware artifact path changed")
     if profile.target_id != PRODUCT_TARGET:
         raise FirmwareProfileError("firmware profile target does not match product target")
     if profile.expected_identity != QUALIFIED_FIRMWARE_IDENTITY:

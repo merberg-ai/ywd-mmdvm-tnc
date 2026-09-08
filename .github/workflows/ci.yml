@@ -48,7 +48,7 @@ jobs:
         run: |
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            ca-certificates python3 passwd util-linux \
+            ca-certificates python3 passwd util-linux sudo \
             git=1:2.47.3-0+deb13u1 \
             make=4.4.1-2 \
             gcc-arm-none-eabi=15:14.2.rel1-1 \
@@ -73,33 +73,47 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Verify exact in-repo migration inputs
+      - name: Verify exact in-repo migration inputs and production cutover
         run: bash scripts/check-firmware-inrepo-migration.sh
 
-      - name: Hand build workspace to unprivileged firmware user
+      - name: Hand checkout to unprivileged firmware user
         run: chown -R fwbuild:fwbuild "$GITHUB_WORKSPACE"
 
-      - name: Build qualified reference through pinned YWD-1278
+      - name: Build qualified reference through frozen YWD-1278 path
         run: |
           runuser -u fwbuild -- python3 vendor/ywd-1278/firmware/build-packet-rssi-ywd1278.py --jobs 2
           cp vendor/ywd-1278/firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin /tmp/ywd-1278-reference.bin
 
-      - name: Build qualified candidate from in-repo firmware inputs
+      - name: Build qualified candidate directly from in-repo inputs
         run: |
           rm -rf firmware/out
           runuser -u fwbuild -- python3 firmware/build-qualified-inrepo.py --jobs 2
+          cp firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin /tmp/direct-inrepo.bin
 
-      - name: Require byte-identical qualified artifact
+      - name: Build through production guided firmware wrapper
         run: |
-          candidate=firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin
+          rm -rf firmware/out
+          YWD_TNC_INSTALLER_BUILD=1 \
+          YWD_TNC_BUILD_USER=fwbuild \
+          YWD_TNC_FIRMWARE_BUILD_JOBS=2 \
+            bash firmware/build.sh
+
+      - name: Require three-way byte-identical qualified artifact
+        run: |
+          production=firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin
           expected=b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616
-          cmp /tmp/ywd-1278-reference.bin "$candidate"
-          test "$(stat -c %s "$candidate")" = 59892
+          cmp /tmp/ywd-1278-reference.bin /tmp/direct-inrepo.bin
+          cmp /tmp/direct-inrepo.bin "$production"
+          test "$(stat -c %s "$production")" = 59892
           test "$(sha256sum /tmp/ywd-1278-reference.bin | awk '{print $1}')" = "$expected"
-          test "$(sha256sum "$candidate" | awk '{print $1}')" = "$expected"
-          echo FWM1_REFERENCE_VS_INREPO_BYTE_IDENTICAL=PASS
-          echo FWM1_QUALIFIED_SHA256_MATCH=PASS
-          echo FWM1_QUALIFIED_TOOLCHAIN_GCC=14.2.1
+          test "$(sha256sum /tmp/direct-inrepo.bin | awk '{print $1}')" = "$expected"
+          test "$(sha256sum "$production" | awk '{print $1}')" = "$expected"
+          echo FWM2_REFERENCE_VS_DIRECT_INREPO_BYTE_IDENTICAL=PASS
+          echo FWM2_DIRECT_VS_PRODUCTION_WRAPPER_BYTE_IDENTICAL=PASS
+          echo FWM2_PRODUCTION_BUILD_INREPO_BYTE_IDENTICAL=PASS
+          echo FWM2_QUALIFIED_SHA256_MATCH=PASS
+          echo FWM2_QUALIFIED_TOOLCHAIN_GCC=14.2.1
+          echo FWM2_PRODUCTION_FIRMWARE_BUILD_SOURCE=IN_REPO
           echo HARDWARE_ACCESSED=NO
           echo FLASH_WRITTEN=NO
           echo RF_TRANSMITTED=NO

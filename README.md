@@ -57,11 +57,13 @@ terminal.
 The guided path performs the complete installation workflow:
 
 1. installs the required host and STM32 toolchain packages;
-2. initializes and verifies the exact pinned modem/firmware source;
+2. initializes and verifies the exact pinned modem runtime/flash-support core
+   and verifies the in-repo qualified firmware engineering provenance;
 3. installs YWD-MMDVM-TNC into `/opt/ywd-mmdvm-tnc`;
 4. creates `/etc/ywd-mmdvm-tnc/config.toml` from the operator's answers;
 5. verifies an existing qualified firmware artifact or reproducibly builds it
-   twice as a non-root user and checks the exact expected SHA-256;
+   twice from the in-repo firmware inputs as a non-root user and checks the
+   exact expected SHA-256;
 6. identifies the HAT and, when starting from recognized stock firmware,
    captures and verifies two independent full-flash rollback reads;
 7. requires the explicit `WRITE-FIRMWARE-NOW` confirmation immediately before
@@ -97,6 +99,11 @@ git clone --recursive https://github.com/merberg-ai/ywd-mmdvm-tnc.git
 cd ywd-mmdvm-tnc
 sudo ./installer/setup.sh
 ```
+
+The recursive clone is still required because the modem runtime and qualified
+HAT probe/flash support remain pinned to the qualified YWD-1278 core. Firmware
+**builds**, however, no longer execute the YWD-1278 firmware builder; their
+engineering inputs and deterministic builder are carried directly in this repo.
 
 `installer/setup.sh` is the same guided workflow used by the one-line bootstrap.
 The lower-level scripts remain available for manual maintenance:
@@ -222,15 +229,30 @@ transfers. Qualification records are stored under `qualification/`.
 
 ## Firmware
 
-The RF-critical modem firmware is pinned to the qualified YWD-1278 AX25R4 core
-at commit:
+The RF-critical modem firmware remains the exact physically-qualified AX25R4
+image. Its source lineage is preserved as pinned provenance, while the build
+inputs needed to reproduce it are now stored directly in YWD-MMDVM-TNC:
+
+```text
+firmware/build-qualified-inrepo.py
+firmware/tooling/packet-rssi-build-manifest.json
+firmware/tooling/qualified-toolchain.json
+firmware/vendor/ywd-mmdvm/
+```
+
+The historical qualified YWD-1278 core remains pinned at:
 
 ```text
 c28c46c3478d7931af611923c92cd8f692a00858
 ```
 
+That submodule is still used by the modem runtime and qualified HAT
+probe/flash-support path. It is **not** used by `firmware/build.sh` to construct
+the firmware image.
+
 Qualified firmware artifact:
 
+- canonical repo path: `firmware/out/0c-p2-rssi-ax25r4-stm32f103-simplex-adf7021-14.7456tcxo-8mhz-hse/`
 - size: `59,892` bytes
 - SHA-256: `b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616`
 - flash base: `0x08000000`
@@ -250,6 +272,19 @@ paths, services, commands, installer UX, state, and documentation use the
 **YWD-MMDVM-TNC** name while the immutable firmware identity remains preserved
 for provenance.
 
+### Reproducible toolchain
+
+The byte-identical build environment is recorded in
+`firmware/tooling/qualified-toolchain.json`. The qualified ARM compiler is GCC
+`14.2.1`; CI additionally pins the Debian Trixie container and the exact
+compiler, binutils, newlib, and ARM libstdc++ package versions that reproduced
+the physically-qualified image.
+
+The production build wrapper verifies the exact qualified builder blob and GCC
+version before it builds, then still requires the final artifact to match the
+qualified size and SHA-256. A compiler/environment drift therefore fails closed
+rather than silently producing a new firmware image.
+
 ### Build the exact firmware
 
 Firmware builds are intentionally non-root:
@@ -258,10 +293,22 @@ Firmware builds are intentionally non-root:
 ./firmware/build.sh
 ```
 
-The build wrapper runs the pinned deterministic builder twice and requires both
-builds to match before verifying the expected artifact hash. Build details are
-written to the displayed log file. No HAT, GPIO, flash, or RF access occurs.
-The guided installer performs this automatically when the artifact is absent.
+The production wrapper runs `firmware/build-qualified-inrepo.py`, which
+materializes the byte-pinned engineering transforms from `firmware/vendor/`,
+fetches only the pinned upstream MMDVM_HS source/submodule revisions recorded in
+the manifest, performs two independent builds, and requires them to be
+byte-identical before the product profile verifies the exact expected SHA-256.
+No YWD-1278 firmware builder is executed.
+
+When the guided installer itself is running as root, `firmware/build.sh` exports
+only the qualified in-repo firmware builder/tooling/engineering inputs into an
+isolated temporary workspace, hands that workspace to the original non-root
+sudo user, performs the two builds there, and copies only the verified artifact
+(and build metadata when present) back into the installer workspace.
+
+Build details are written to the displayed log file. No HAT, GPIO, flash, or RF
+access occurs. The guided installer performs this automatically when the
+artifact is absent.
 
 ### Probe the installed firmware
 

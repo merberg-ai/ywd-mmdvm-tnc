@@ -40,10 +40,13 @@ class P1ToolingContractTests(unittest.TestCase):
         self.assertIn('systemctl enable "$SERVICE"', setup)
         self.assertIn('systemctl restart "$SERVICE"', setup)
 
-    def test_build_delegates_to_exact_frozen_builder(self) -> None:
+    def test_build_delegates_to_exact_inrepo_builder(self) -> None:
         text = (ROOT / "firmware" / "build.sh").read_text(encoding="utf-8")
-        self.assertIn("c28c46c3478d7931af611923c92cd8f692a00858", text)
-        self.assertIn("build-packet-rssi-ywd1278.py", text)
+        self.assertIn('BUILDER="$ROOT/firmware/build-qualified-inrepo.py"', text)
+        self.assertIn('TOOLCHAIN="$ROOT/firmware/tooling/qualified-toolchain.json"', text)
+        self.assertIn("FIRMWARE_BUILD_SOURCE=IN_REPO", text)
+        self.assertIn("YWD1278_FIRMWARE_BUILDER_INVOKED=NO", text)
+        self.assertNotIn("build-packet-rssi-ywd1278.py", text)
         self.assertIn("FLASH_WRITTEN=NO", text)
         self.assertIn("RF_TRANSMITTED=NO", text)
 
