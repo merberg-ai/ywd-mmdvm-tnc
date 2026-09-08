@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "project": "YWD-MMDVM-TNC",
+  "phase": "FWM2",
+  "qualification": "in-repo-production-firmware-build-host",
+  "date": "2026-09-08",
+  "status": "PASS",
+  "scope": "host-only",
+  "parent_checkpoint": {
+    "branch": "checkpoint/firmware-inrepo-byte-identical",
+    "commit": "e1b89785714168e80f6fb02b8e6930d2bfbfda56"
+  },
+  "code_under_test": {
+    "branch": "firmware/inrepo-cutover",
+    "commit": "946b7332d39d0c9c1b4435c2b3ab77e94862cefd",
+    "commit_message": "FWM2: cut production firmware build to in-repo qualified path",
+    "product_version": "0.1.0a10"
+  },
+  "ci": {
+    "workflow": "ywd-mmdvm-tnc-ci",
+    "run_id": 34264018469,
+    "run_number": 65,
+    "conclusion": "success",
+    "host_contract_job_id": 102188738393,
+    "firmware_inrepo_equivalence_job_id": 102188738705
+  },
+  "production_build_cutover": {
+    "production_wrapper": "firmware/build.sh",
+    "qualified_builder": "firmware/build-qualified-inrepo.py",
+    "engineering_manifest": "firmware/tooling/packet-rssi-build-manifest.json",
+    "toolchain_manifest": "firmware/tooling/qualified-toolchain.json",
+    "engineering_root": "firmware/vendor/ywd-mmdvm",
+    "canonical_artifact_root": "firmware/out",
+    "ywd_1278_firmware_builder_reachable_from_production_wrapper": false,
+    "guided_root_to_nonroot_build_path_exercised_in_ci": true,
+    "modem_runtime_dependency_changed": false,
+    "flash_support_dependency_changed": false,
+    "installer_flash_orchestration_changed": false
+  },
+  "three_way_equivalence": {
+    "frozen_ywd_1278_reference_build": "PASS",
+    "direct_inrepo_build": "PASS",
+    "production_guided_wrapper_build": "PASS",
+    "reference_vs_direct_inrepo_byte_identical": true,
+    "direct_inrepo_vs_production_wrapper_byte_identical": true,
+    "production_build_inrepo_byte_identical": true,
+    "artifact_size_bytes": 59892,
+    "artifact_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+    "runtime_identity": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
+  },
+  "qualified_toolchain": {
+    "distribution": "Debian trixie",
+    "container": "debian:trixie-slim@sha256:d7e12182ce18b85b93007c1dedf31f2d29e01ccf3182cc4017c709b6259bc132",
+    "arm_gcc_full_version": "14.2.1",
+    "gcc_arm_none_eabi": "15:14.2.rel1-1",
+    "binutils_arm_none_eabi": "2.44-3+23+b1",
+    "libnewlib_arm_none_eabi": "4.5.0.20241231-1",
+    "libstdcxx_arm_none_eabi_newlib": "15:14.2.rel1-1+29"
+  },
+  "safety": {
+    "physical_hardware_used": false,
+    "modem_uart_opened": false,
+    "gpio_accessed": false,
+    "flash_written": false,
+    "rf_transmitted": false,
+    "persistent_tx_default_changed": false,
+    "qualified_rf_runtime_behavior_changed": false,
+    "frozen_firmware_identity_changed": false,
+    "frozen_firmware_bytes_changed": false
+  },
+  "result_markers": [
+    "FWM2_ENGINEERING_BLOBS_EXACT=PASS",
+    "FWM2_TOOLING_BLOBS_EXACT=PASS",
+    "FWM2_BUILDER_BLOB_EXACT=PASS",
+    "FWM2_QUALIFIED_TOOLCHAIN_PROVENANCE=PASS",
+    "FWM2_MATERIALIZER=PASS",
+    "FWM2_PRODUCTION_FIRMWARE_BUILD_SOURCE=IN_REPO",
+    "FWM2_YWD1278_FIRMWARE_BUILDER_REACHABLE_FROM_BUILD_SH=NO",
+    "FWM2_MODEM_RUNTIME_DEPENDENCY_CHANGED=NO",
+    "INSTALLER_FLASH_BEHAVIOR_CHANGED=NO",
+    "FWM2_REFERENCE_VS_DIRECT_INREPO_BYTE_IDENTICAL=PASS",
+    "FWM2_DIRECT_VS_PRODUCTION_WRAPPER_BYTE_IDENTICAL=PASS",
+    "FWM2_PRODUCTION_BUILD_INREPO_BYTE_IDENTICAL=PASS",
+    "FWM2_QUALIFIED_SHA256_MATCH=PASS",
+    "HARDWARE_ACCESSED=NO",
+    "FLASH_WRITTEN=NO",
+    "RF_TRANSMITTED=NO"
+  ],
+  "next_boundary": "A later phase may migrate the remaining modem-runtime and HAT probe/flash-support dependency away from vendor/ywd-1278. FWM2 does not authorize that migration and does not authorize a physical firmware write."
+}
