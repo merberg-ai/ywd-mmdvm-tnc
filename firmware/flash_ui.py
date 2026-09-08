@@ -54,6 +54,20 @@ def make_log() -> Path:
     return path
 
 
+def read_interactive_confirmation(prompt: str) -> str:
+    """Read a destructive-action confirmation from a real terminal only."""
+    if sys.stdin.isatty():
+        sys.stdout.write(prompt)
+        sys.stdout.flush()
+        return sys.stdin.readline().strip()
+    try:
+        with open("/dev/tty", "r+", encoding="utf-8", buffering=1) as tty:
+            tty.write(prompt)
+            return tty.readline().strip()
+    except OSError as exc:
+        raise qf.FlashError("interactive firmware confirmation requires a TTY") from exc
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="ywd-mmdvm-tnc firmware")
     parser.add_argument("mode", choices=("probe", "backup", "flash"))
@@ -157,12 +171,7 @@ def main() -> int:
                     print()
                     warn("A firmware write is ready. The verified stock backup is safe.")
                     prompt = f"Type {profile.final_write_confirmation} to write the qualified image: "
-                    try:
-                        with open("/dev/tty", "r+", encoding="utf-8", buffering=1) as tty:
-                            tty.write(prompt)
-                            response = tty.readline().strip()
-                    except OSError as exc:
-                        raise qf.FlashError("interactive firmware confirmation requires /dev/tty") from exc
+                    response = read_interactive_confirmation(prompt)
                     if response != profile.final_write_confirmation:
                         raise qf.FlashError("firmware write cancelled")
                     step("Programming qualified firmware")

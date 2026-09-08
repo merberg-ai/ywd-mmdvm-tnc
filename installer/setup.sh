@@ -138,7 +138,11 @@ if [[ "$firmware_answer" == yes ]]; then
     exit 19
   fi
 
-  if YWD_TNC_LOG_FILE="$YWD_TNC_LOG_FILE" "$ROOT/firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4; then
+  if [[ ! -r /dev/tty ]]; then
+    ui_fail "Interactive firmware confirmation requires a controlling terminal (/dev/tty)."
+    exit 20
+  fi
+  if YWD_TNC_LOG_FILE="$YWD_TNC_LOG_FILE" "$ROOT/firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4 </dev/tty; then
     firmware_ready=yes
   else
     ui_fail "Firmware preparation failed."

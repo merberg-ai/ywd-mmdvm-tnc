@@ -28,6 +28,7 @@ bootstrap = (root / "install.sh").read_text(encoding="utf-8")
 setup = (root / "installer/setup.sh").read_text(encoding="utf-8")
 ensure = (root / "firmware/ensure.sh").read_text(encoding="utf-8")
 build = (root / "firmware/build.sh").read_text(encoding="utf-8")
+flash_ui = (root / "firmware/flash_ui.py").read_text(encoding="utf-8")
 ui = (root / "installer/lib/ui.sh").read_text(encoding="utf-8")
 service = (root / "systemd/ywd-mmdvm-tnc.service").read_text(encoding="utf-8")
 readme = (root / "README.md").read_text(encoding="utf-8")
@@ -44,8 +45,8 @@ assert 'listen = "$kiss_listen"' in setup
 assert 'allow_wildcard_bind = $wildcard' in setup
 assert 'WRITE-FIRMWARE-NOW' in setup
 assert 'bash "$ROOT/firmware/ensure.sh"' in setup
-assert 'firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4' in setup
-assert setup.index('bash "$ROOT/firmware/ensure.sh"') < setup.index('firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4')
+assert 'firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4 </dev/tty' in setup
+assert setup.index('bash "$ROOT/firmware/ensure.sh"') < setup.index('firmware/flash.sh" flash --authorize FLASH-QUALIFIED-AX25R4 </dev/tty')
 assert 'verify-artifact' in ensure
 assert 'firmware/build.sh' in ensure
 assert 'YWD_TNC_INSTALLER_BUILD=1' in ensure
@@ -55,6 +56,10 @@ assert 'git -c safe.directory=' in build and 'archive --format=tar HEAD' in buil
 assert 'sudo -H -u "$build_user" -- python3' in build
 assert 'chown -R "$build_user:$build_group" "$BUILD_WORKSPACE"' in build
 assert 'BUILD_EXECUTED_AS_ROOT=NO' in build
+assert 'def read_interactive_confirmation' in flash_ui
+assert 'sys.stdin.isatty()' in flash_ui
+assert 'open("/dev/tty", "r+"' in flash_ui
+assert 'response = read_interactive_confirmation(prompt)' in flash_ui
 assert 'systemctl enable "$SERVICE"' in setup
 assert 'systemctl restart "$SERVICE"' in setup
 
@@ -82,6 +87,7 @@ print("PUBLIC_INSTALLER_UI_CONTRACT=PASS")
 print("PUBLIC_STOCK_HAT_AUTO_BUILD_CONTRACT=PASS")
 print("PUBLIC_NONROOT_FIRMWARE_BUILD_CONTRACT=PASS")
 print("PUBLIC_SCRIPT_EXECUTION_CONTRACT=PASS")
+print("PUBLIC_TTY_FLASH_CONFIRMATION_CONTRACT=PASS")
 print("PUBLIC_CONFIG_SAFE_DEFAULTS=PASS")
 print("PUBLIC_SERVICE_BRANDING=PASS")
 print("PUBLIC_README_CONTRACT=PASS")
