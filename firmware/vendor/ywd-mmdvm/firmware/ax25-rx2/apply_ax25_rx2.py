@@ -85,6 +85,9 @@ def main() -> None:
     if "CIO_FIFO_RESERVE = 256U" not in (src / "AX25AFSKTX.cpp").read_text():
         raise SystemExit("qualified AX25C1 v0.1.4 TX reserve is missing")
 
+    # The ADF7021 normal RX/TX interface uses Register 15 value 0x000E000F.
+    # RX test mode 6 changes DB7:DB4 to 0b0110, selecting the linear slicer on
+    # TxRxDATA while bypassing CDR.  Restore the normal value after capture.
     adf = replace_once(
         adf,
         "#if defined(SEND_RSSI_DATA)\nuint16_t CIO::readRSSI()",
