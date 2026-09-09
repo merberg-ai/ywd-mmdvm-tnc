@@ -1,0 +1,276 @@
+{
+  "flash_written": false,
+  "forbidden_product_layers": [
+    "bbs",
+    "beacon",
+    "console",
+    "forwarding",
+    "mailbox",
+    "node"
+  ],
+  "gpio_accessed": false,
+  "hardware_accessed": false,
+  "phase": "FWM3",
+  "rf_transmitted": false,
+  "runtime_files": [
+    {
+      "bytes": 70,
+      "git_blob_sha": "5cf7829ebaa3aa162aeadac476fff558e0a442e7",
+      "path": "src/ywd1278/__init__.py",
+      "sha256": "f8203d6b4e6462b01355c2675872e006b340bbe4360aa3b1933a9066448aae43",
+      "source_path": "src/ywd1278/__init__.py"
+    },
+    {
+      "bytes": 483,
+      "git_blob_sha": "c35b8a99d9689a182752dbeb63c7ed70ed206912",
+      "path": "src/ywd1278/ax25/__init__.py",
+      "sha256": "56f5450f77a3c81eef0ce8b20d092143490a5d6132eb12804fb208d13bd128e7",
+      "source_path": "src/ywd1278/ax25/__init__.py"
+    },
+    {
+      "bytes": 8306,
+      "git_blob_sha": "866a500d9f3a5d3fc80f6918d07ff83a6672ad64",
+      "path": "src/ywd1278/ax25/codec.py",
+      "sha256": "93a2c4b0582261e3843e19e06e663a4c0c0efe935177fb33c399491fe9aded84",
+      "source_path": "src/ywd1278/ax25/codec.py"
+    },
+    {
+      "bytes": 1327,
+      "git_blob_sha": "dd235f04835543fe16eb4d9f29c6ecb8b9a2e79e",
+      "path": "src/ywd1278/kiss/__init__.py",
+      "sha256": "9cf4709725ab1a585196f23fbc1606a25e62172b2f7362cc2df5bda42326c2e7",
+      "source_path": "src/ywd1278/kiss/__init__.py"
+    },
+    {
+      "bytes": 12797,
+      "git_blob_sha": "b6c23879027c15ef944a9e411429694a312d606e",
+      "path": "src/ywd1278/kiss/control.py",
+      "sha256": "a46a1c2866aa59869b7a7d7c215e919dbcf47e61521d4645fbb12b0138d3adcc",
+      "source_path": "src/ywd1278/kiss/control.py"
+    },
+    {
+      "bytes": 4543,
+      "git_blob_sha": "7227e68b6829099580f72f2a49fe0e68fbce1363",
+      "path": "src/ywd1278/kiss/framing.py",
+      "sha256": "679c512bf0ff69036b1ee9d5d17a433c98d2ceda22bc827d2acec3e00f72eddc",
+      "source_path": "src/ywd1278/kiss/framing.py"
+    },
+    {
+      "bytes": 6902,
+      "git_blob_sha": "d586fe9cbef9f42c5ec4d2e18880dfad32548b33",
+      "path": "src/ywd1278/kiss/server.py",
+      "sha256": "cff1da5af890a0561cebc0297e2e8c131005f9b1aae784656d8a180d9d91230d",
+      "source_path": "src/ywd1278/kiss/server.py"
+    },
+    {
+      "bytes": 6354,
+      "git_blob_sha": "63cf33f4b6d4cedd091af0349a8037669d45e84d",
+      "path": "src/ywd1278/kiss/sustained.py",
+      "sha256": "fad7a93081511eb014d1ab0d2ff8b12c8670d70d552462a623e8d06a80a87dfc",
+      "source_path": "src/ywd1278/kiss/sustained.py"
+    },
+    {
+      "bytes": 4768,
+      "git_blob_sha": "e06c1a619a02ecb4cf2073a3f270be1b2d54ea0e",
+      "path": "src/ywd1278/kiss/tx_backend.py",
+      "sha256": "a80bedea04c1750b3032ed15b5ed322aff4dd42ac88141f4164020ae9ce738d4",
+      "source_path": "src/ywd1278/kiss/tx_backend.py"
+    },
+    {
+      "bytes": 12467,
+      "git_blob_sha": "44f4b6c0bddd6ac0977646ac417e448c9a1398ea",
+      "path": "src/ywd1278/kiss/tx_path.py",
+      "sha256": "2ec8651a04e82d1797d7232133e2dcd97fa0af1e2ef757264df235b0ab9aaa82",
+      "source_path": "src/ywd1278/kiss/tx_path.py"
+    },
+    {
+      "bytes": 989,
+      "git_blob_sha": "8e5d7f645a6b0df410f48e4083babeef977a316a",
+      "path": "src/ywd1278/modem/__init__.py",
+      "sha256": "a8313f56763708a8083a73be1274129d267bd5421ddcc68cbd30e4d26a07c214",
+      "source_path": "src/ywd1278/modem/__init__.py"
+    },
+    {
+      "bytes": 5011,
+      "git_blob_sha": "c671633a9c0934cbc8206957eafc1d5736537fc7",
+      "path": "src/ywd1278/modem/_serial.py",
+      "sha256": "39b93e086640c9c5193fbc93028d4e6ef7666c9ae49009b77425251b437d16e6",
+      "source_path": "src/ywd1278/modem/_serial.py"
+    },
+    {
+      "bytes": 12954,
+      "git_blob_sha": "012a34d3ff65c14f2f29e3954ae304d3ee281f9a",
+      "path": "src/ywd1278/modem/owner.py",
+      "sha256": "1f221812fec1b6ce318cdd061335dcd57468d924cfdcb5f43d46a2c5c02489a1",
+      "source_path": "src/ywd1278/modem/owner.py"
+    },
+    {
+      "bytes": 8992,
+      "git_blob_sha": "1a923c81a90f4a9f782c3b21c321ace67cc8cd27",
+      "path": "src/ywd1278/modem/protocol.py",
+      "sha256": "5921443c1d373db209c53a8780a1f7b42c3f230263581b66d4408938636de91b",
+      "source_path": "src/ywd1278/modem/protocol.py"
+    },
+    {
+      "bytes": 2605,
+      "git_blob_sha": "a671c07ddca83d4c0b061568bc48fb29e386c632",
+      "path": "src/ywd1278/modem/rx_config.py",
+      "sha256": "e33c8b7f2c3d203bf60d41d5a8a33f9de86e241e45b5fd497ddf4532c4b8a12a",
+      "source_path": "src/ywd1278/modem/rx_config.py"
+    },
+    {
+      "bytes": 1066,
+      "git_blob_sha": "895ecc609c5490736f3c267d613c7bd3fa536a41",
+      "path": "src/ywd1278/modem/tx_config.py",
+      "sha256": "a73b5158d35da54509ae0166af6195f624f8296a1d61961800bf3d81733245ac",
+      "source_path": "src/ywd1278/modem/tx_config.py"
+    },
+    {
+      "bytes": 3085,
+      "git_blob_sha": "d32763473a1eba89566ed512e9ab5fc7de575480",
+      "path": "src/ywd1278/modem/tx_owner.py",
+      "sha256": "91f43ac23a55579e8305d0df4634a72f0e6de23ed7142723d82cf9270362392d",
+      "source_path": "src/ywd1278/modem/tx_owner.py"
+    },
+    {
+      "bytes": 904,
+      "git_blob_sha": "020bb229e1cdd4a8a61cec90e85b60a537572ddb",
+      "path": "src/ywd1278/phy/__init__.py",
+      "sha256": "a842c1c6b20864531b7346ff765521853560d4854744867722478f948aa2538f",
+      "source_path": "src/ywd1278/phy/__init__.py"
+    },
+    {
+      "bytes": 14328,
+      "git_blob_sha": "18fae685a0accdeb2eb425793632cf123f45bbda",
+      "path": "src/ywd1278/phy/bell202_rx.py",
+      "sha256": "41214341e26f5322c188113df6612dd956bebf29602ef0eeb5e6369cb0ce7ab3",
+      "source_path": "src/ywd1278/phy/bell202_rx.py"
+    },
+    {
+      "bytes": 4963,
+      "git_blob_sha": "39677faa3302a74da9fbae6fa858899e54f1874f",
+      "path": "src/ywd1278/phy/bell202_tx.py",
+      "sha256": "35b2e577a994695ad4674af84b9e0ff080bce38b87e524ceff8e54b016205574",
+      "source_path": "src/ywd1278/phy/bell202_tx.py"
+    },
+    {
+      "bytes": 431,
+      "git_blob_sha": "7336134297675de834ed53395e62d641b0020f1d",
+      "path": "src/ywd1278/service/__init__.py",
+      "sha256": "f38ed959336e0ecbedf75906d74e617b1d5569fea48b705fef33bed4fe10d711",
+      "source_path": "src/ywd1278/service/__init__.py"
+    },
+    {
+      "bytes": 3732,
+      "git_blob_sha": "12d9c58db335f55577274bfe458816fda2b4ae11",
+      "path": "src/ywd1278/service/live_channel_access.py",
+      "sha256": "cdfd86405c24478bc584d0168b78aa9c3482f92f53923d8ce5d06080da59c570",
+      "source_path": "src/ywd1278/service/live_channel_access.py"
+    },
+    {
+      "bytes": 11521,
+      "git_blob_sha": "ea63eb82cb82ed273cab8d393aedf797b46ff123",
+      "path": "src/ywd1278/service/rx_runtime.py",
+      "sha256": "fcbf888073fd638d2255db8917b54e58c9509566e4fce13eae0a9415146dcb36",
+      "source_path": "src/ywd1278/service/rx_runtime.py"
+    },
+    {
+      "bytes": 13868,
+      "git_blob_sha": "f1a74ae44824bafc2b89c09e77fa416ac26bb4f1",
+      "path": "src/ywd1278/service/tnc_runtime.py",
+      "sha256": "7e06beb741bec87f7dd4982ac528cff5b20db28de67ff71267b0dc20102ee923",
+      "source_path": "src/ywd1278/service/tnc_runtime.py"
+    },
+    {
+      "bytes": 2850,
+      "git_blob_sha": "3902944d12d3d8eb2b9ebfc5c52ef0549288c71d",
+      "path": "src/ywd1278/tx/__init__.py",
+      "sha256": "63ae2c71ba0b0fd30e133448b271bde9bed93ed2a8c3093d36f5c5d78a273c44",
+      "source_path": "src/ywd1278/tx/__init__.py"
+    },
+    {
+      "bytes": 11225,
+      "git_blob_sha": "d3631b549ea87cb14ce66e1020d74971c4c51392",
+      "path": "src/ywd1278/tx/access_queue.py",
+      "sha256": "bb7ee76e8661fd4f8da28b4cc4ce1fa674663c98c8c99b3bf939a1660ca0f8b1",
+      "source_path": "src/ywd1278/tx/access_queue.py"
+    },
+    {
+      "bytes": 11633,
+      "git_blob_sha": "1e3307dccea4f2805d32cb9be5b34f3537e29c4f",
+      "path": "src/ywd1278/tx/broker.py",
+      "sha256": "740d6a5f103b19fd0eca45df29386fd7551b9334f32f428b10abc78e2d25fe74",
+      "source_path": "src/ywd1278/tx/broker.py"
+    },
+    {
+      "bytes": 3932,
+      "git_blob_sha": "398af9158875c6ac063d0264c150086df009e555",
+      "path": "src/ywd1278/tx/channel_access.py",
+      "sha256": "427d39bd9e5ed3f6aa2556280dac6bda1435743f103346ecfb6300ad9f269612",
+      "source_path": "src/ywd1278/tx/channel_access.py"
+    },
+    {
+      "bytes": 5525,
+      "git_blob_sha": "46c655a6d9143ac9ea21cbccb36caf77c4a14cd8",
+      "path": "src/ywd1278/tx/channel_busy.py",
+      "sha256": "eb2b5999c9385a053e484a978363cda7c87639f1dd8da928c931f8337900852c",
+      "source_path": "src/ywd1278/tx/channel_busy.py"
+    },
+    {
+      "bytes": 7623,
+      "git_blob_sha": "c9de1ed7e751d6d96eadc4f6ac7b027cfe859012",
+      "path": "src/ywd1278/tx/contextual.py",
+      "sha256": "cecc2bed19087a52292448bce11c0d3ec0668346ec221bcd52447ff1b5032bbf",
+      "source_path": "src/ywd1278/tx/contextual.py"
+    },
+    {
+      "bytes": 9537,
+      "git_blob_sha": "b21925be0799d6d6ee887ba6dbb494014d50c710",
+      "path": "src/ywd1278/tx/csma.py",
+      "sha256": "73547e6f8936d6772ae6fcba1970dfd9f711d28d0b369141ba1c7ef94f88faf1",
+      "source_path": "src/ywd1278/tx/csma.py"
+    },
+    {
+      "bytes": 12079,
+      "git_blob_sha": "d826fd4a53d52ba359eb0b45642370db0f0cb7cc",
+      "path": "src/ywd1278/tx/half_duplex.py",
+      "sha256": "443d56ca9f6f4ac1ee7c123c6f07200a15796b9a885cadaffb149ca37f57fefd",
+      "source_path": "src/ywd1278/tx/half_duplex.py"
+    },
+    {
+      "bytes": 5472,
+      "git_blob_sha": "b8035a58c4b48765c580dab06bcdb054a9801c8c",
+      "path": "src/ywd1278/tx/txdelay.py",
+      "sha256": "a3b0cb133b8a446bec2ed62f5ca8ed4aaa2e54761152769acda7198c16d3010f",
+      "source_path": "src/ywd1278/tx/txdelay.py"
+    }
+  ],
+  "runtime_seed": "src/ywdtnc/engine.py",
+  "schema": 1,
+  "source_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+  "source_repository": "merberg-ai/ywd-1278",
+  "support_files": [
+    {
+      "bytes": 10471,
+      "git_blob_sha": "b83ffea0f93c30832435795e6da03d1e8292fe89",
+      "path": "firmware/hat_control.py",
+      "sha256": "3f6a29bfbf40aeef40a0058a67b09215b38b998f1b429253b3e8d357b317cb32",
+      "source_path": "firmware/hat_control.py"
+    },
+    {
+      "bytes": 9894,
+      "git_blob_sha": "4210436ab950da4830ddea05020f642c40734c64",
+      "path": "firmware/probe_hat.py",
+      "sha256": "6ee4b88067f35b884bfb278eed8d28b464bf58ee4a9a19c50806f71476950f0c",
+      "source_path": "firmware/probe_hat.py"
+    },
+    {
+      "bytes": 15805,
+      "git_blob_sha": "846a293917c4ab35293e33dce2bf7b599a7cc122",
+      "path": "firmware/targets.json",
+      "sha256": "4c50902799a5510bfc66a41159b2464bccfc092ea46571c2c4d52cb9e7c0538a",
+      "source_path": "firmware/targets.json"
+    }
+  ],
+  "uart_opened": false
+}

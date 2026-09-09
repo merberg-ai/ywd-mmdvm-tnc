@@ -36,10 +36,11 @@ from ywdtnc.firmware import (  # noqa: E402
 )
 
 PROFILE_PATH = ROOT / "firmware" / "product-ax25r4.json"
-VENDOR_FW = ROOT / "vendor" / "ywd-1278" / "firmware"
-TARGETS = VENDOR_FW / "targets.json"
-HAT_CONTROL = VENDOR_FW / "hat_control.py"
-PROBE = VENDOR_FW / "probe_hat.py"
+SUPPORT_FW = ROOT / "firmware"
+TARGETS = SUPPORT_FW / "targets.json"
+HAT_CONTROL = SUPPORT_FW / "hat_control.py"
+PROBE = SUPPORT_FW / "probe_hat.py"
+RUNTIME_VENDOR_MANIFEST = ROOT / "qualification" / "fwm3-runtime-vendor-manifest.json"
 BACKUP_ROOT = Path("/var/lib/ywd-mmdvm-tnc/firmware-backups")
 LEGACY_BACKUP_ROOT = Path("/var/lib/ywd-1278/firmware-backups")
 
@@ -83,10 +84,25 @@ def require_tools() -> None:
 
 
 def verify_core_pin(expected: str) -> None:
-    proc = run(["git", "-c", "safe.directory=*", "-C", str(ROOT / "vendor" / "ywd-1278"), "rev-parse", "HEAD"], capture=True)
-    actual = proc.stdout.strip()
+    """Verify exact in-repo support provenance for the frozen source commit."""
+    try:
+        data = json.loads(RUNTIME_VENDOR_MANIFEST.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise FlashError(f"cannot load in-repo runtime/support provenance: {exc}") from exc
+    actual = str(data.get("source_commit") or "")
     if actual != expected:
-        raise FlashError(f"qualified core mismatch: expected {expected}, got {actual or 'UNKNOWN'}")
+        raise FlashError(f"qualified source provenance mismatch: expected {expected}, got {actual or 'UNKNOWN'}")
+    entries = {str(item.get("path")): item for item in data.get("support_files", [])}
+    for rel in ("firmware/hat_control.py", "firmware/probe_hat.py", "firmware/targets.json"):
+        entry = entries.get(rel)
+        if not isinstance(entry, dict):
+            raise FlashError(f"qualified support provenance is missing {rel}")
+        path = ROOT / rel
+        if not path.is_file():
+            raise FlashError(f"qualified in-repo support file is missing: {rel}")
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != entry.get("sha256"):
+            raise FlashError(f"qualified in-repo support digest mismatch: {rel}")
 
 
 def load_target(target_id: str) -> dict:

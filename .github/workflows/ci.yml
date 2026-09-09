@@ -2,7 +2,7 @@ name: ywd-mmdvm-tnc-ci
 
 on:
   push:
-    branches: [main, dev, "firmware/**", "checkpoint/**"]
+    branches: [main, dev, "firmware/**", "runtime/**", "checkpoint/**"]
   pull_request:
 
 permissions:
@@ -23,11 +23,14 @@ jobs:
       - name: Verify qualified core pin
         run: test "$(git -C vendor/ywd-1278 rev-parse HEAD)" = "c28c46c3478d7931af611923c92cd8f692a00858"
 
-      - name: Install pinned core and product
+      - name: Install product with bundled frozen runtime
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          python -m pip install --no-deps ./vendor/ywd-1278
-          python -m pip install --no-deps -e .
+          python -m pip install --no-deps .
+          cd /tmp
+          python -c 'import ywdtnc.engine, ywd1278.kiss.sustained, ywd1278.modem.tx_owner, ywd1278.service.tnc_runtime; print("FWM3_PRODUCT_ONLY_RUNTIME_IMPORT=PASS")'
+          if python -m pip show ywd-1278 >/dev/null 2>&1; then echo "unexpected separate ywd-1278 distribution" >&2; exit 1; fi
+          echo FWM3_SEPARATE_YWD1278_DISTRIBUTION_INSTALLED=NO
 
       - name: Public release host contract
         run: bash scripts/check-public-polish.sh
@@ -37,6 +40,28 @@ jobs:
 
       - name: Framework self-test remains RF inert
         run: ywd-tncd --config config/ywd-mmdvm-tnc.example.toml --framework-self-test
+
+  runtime-inrepo-equivalence:
+    if: startsWith(github.ref, 'refs/heads/runtime/') || startsWith(github.ref, 'refs/heads/checkpoint/runtime-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify byte-identical in-repo runtime and HAT support
+        run: bash scripts/check-runtime-inrepo-migration.sh
+      - name: Prove product-only wheel installation
+        run: |
+          python -m venv /tmp/fwm3-venv
+          /tmp/fwm3-venv/bin/python -m pip install --upgrade pip setuptools wheel
+          /tmp/fwm3-venv/bin/python -m pip install --no-deps .
+          cd /tmp
+          /tmp/fwm3-venv/bin/python -c 'import importlib.metadata as m; import ywdtnc.engine, ywd1278.kiss.sustained, ywd1278.modem.tx_owner, ywd1278.service.tnc_runtime; assert m.version("ywd-mmdvm-tnc") == "0.1.0a11"; print("FWM3_PRODUCT_ONLY_WHEEL_INSTALL=PASS")'
+          if /tmp/fwm3-venv/bin/python -m pip show ywd-1278 >/dev/null 2>&1; then echo "unexpected separate ywd-1278 distribution" >&2; exit 1; fi
+          echo FWM3_SEPARATE_YWD1278_DISTRIBUTION_INSTALLED=NO
 
   firmware-inrepo-equivalence:
     if: startsWith(github.ref, 'refs/heads/firmware/') || startsWith(github.ref, 'refs/heads/checkpoint/firmware-')

@@ -4,6 +4,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 bash "$ROOT/scripts/check-p3-lan-kiss.sh"
 bash "$ROOT/scripts/check-firmware-inrepo-migration.sh"
+bash "$ROOT/scripts/check-runtime-inrepo-migration.sh"
 
 for script in \
   "$ROOT/install.sh" \
@@ -17,7 +18,7 @@ for script in \
   "$ROOT/firmware/flash.sh"; do
   bash -n "$script"
 done
-python3 -m py_compile "$ROOT/firmware/flash_ui.py" "$ROOT/firmware/hat_control.py" "$ROOT/firmware/build-qualified-inrepo.py"
+python3 -m py_compile "$ROOT/firmware/flash_ui.py" "$ROOT/firmware/hat_control.py" "$ROOT/firmware/probe_hat.py" "$ROOT/firmware/build-qualified-inrepo.py"
 
 python3 - "$ROOT" <<'PY'
 from pathlib import Path
@@ -68,6 +69,9 @@ assert 'FIRMWARE_BUILD_SOURCE=IN_REPO' in build
 assert 'YWD1278_FIRMWARE_BUILDER_INVOKED=NO' in build
 assert 'build-packet-rssi-ywd1278.py' not in build
 assert 'BUILD_EXECUTED_AS_ROOT=NO' in build
+assert '$2/vendor/ywd-1278' not in (root / "installer/install.sh").read_text(encoding="utf-8")
+assert 'vendor/ywd-1278/firmware' not in (root / "firmware/probe.sh").read_text(encoding="utf-8")
+assert 'ROOT / "vendor" / "ywd-1278"' not in (root / "firmware/qualified_flash.py").read_text(encoding="utf-8")
 assert 'def read_interactive_confirmation' in flash_ui
 assert 'sys.stdin.isatty()' in flash_ui
 assert 'open("/dev/tty", "r+"' in flash_ui

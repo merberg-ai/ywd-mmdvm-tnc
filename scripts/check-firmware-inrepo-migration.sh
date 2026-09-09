@@ -116,11 +116,9 @@ assert profile["artifact_sha256"] == toolchain["qualified_artifact"]["sha256"]
 assert profile["firmware_engineering_manifest"] == "firmware/tooling/packet-rssi-build-manifest.json"
 assert profile["qualified_toolchain_manifest"] == "firmware/tooling/qualified-toolchain.json"
 
-# Runtime composition is intentionally not migrated in FWM2.
-installer = (root / "installer/install.sh").read_text(encoding="utf-8")
-flash = (root / "firmware/qualified_flash.py").read_text(encoding="utf-8")
-assert 'vendor/ywd-1278' in installer
-assert 'VENDOR_FW = ROOT / "vendor" / "ywd-1278" / "firmware"' in flash
+# Runtime composition and HAT-support location are outside FWM2's firmware-
+# build qualification. Later isolated phases may migrate those paths without
+# changing the exact FWM2 builder/tooling/engineering inputs asserted above.
 
 print("FWM2_ENGINEERING_BLOBS_EXACT=PASS")
 print("FWM2_TOOLING_BLOBS_EXACT=PASS")
@@ -129,7 +127,8 @@ print("FWM2_QUALIFIED_TOOLCHAIN_PROVENANCE=PASS")
 print("FWM2_MATERIALIZER=PASS")
 print("FWM2_PRODUCTION_FIRMWARE_BUILD_SOURCE=IN_REPO")
 print("FWM2_YWD1278_FIRMWARE_BUILDER_REACHABLE_FROM_BUILD_SH=NO")
-print("FWM2_MODEM_RUNTIME_DEPENDENCY_CHANGED=NO")
+print("FWM2_RUNTIME_COMPOSITION_OUT_OF_SCOPE=YES")
+print("FWM2_FIRMWARE_BUILD_CONTRACT_PRESERVED=PASS")
 print("INSTALLER_FLASH_BEHAVIOR_CHANGED=NO")
 print("HARDWARE_ACCESSED=NO")
 print("FLASH_WRITTEN=NO")

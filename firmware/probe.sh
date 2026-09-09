@@ -7,19 +7,33 @@ YWD_TNC_LOG_BASENAME=firmware-probe
 ui_init "$@"
 
 DEVICE="${YWD_TNC_DEVICE:-/dev/ttyAMA0}"
-TARGETS="$ROOT/vendor/ywd-1278/firmware/targets.json"
-PROBE="$ROOT/vendor/ywd-1278/firmware/probe_hat.py"
+TARGETS="$ROOT/firmware/targets.json"
+PROBE="$ROOT/firmware/probe_hat.py"
 EXPECTED_IDENTITY="MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
 EXPECTED_TARGET="mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
-EXPECTED_CORE="c28c46c3478d7931af611923c92cd8f692a00858"
+PROVENANCE="$ROOT/qualification/fwm3-runtime-vendor-manifest.json"
 
 [[ ${EUID:-$(id -u)} -eq 0 ]] || { ui_fail "Run the HAT probe with sudo/root."; exit 2; }
 [[ -e "$DEVICE" ]] || { ui_fail "Modem UART does not exist: $DEVICE"; exit 2; }
 [[ -f "$TARGETS" && -f "$PROBE" ]] || { ui_fail "Qualified firmware probe tooling is missing."; exit 2; }
 
 ui_header "YWD-MMDVM-TNC HAT check"
-actual_core="$(git -c safe.directory='*' -C "$ROOT/vendor/ywd-1278" rev-parse HEAD 2>>"$YWD_TNC_LOG_FILE" || true)"
-[[ "$actual_core" == "$EXPECTED_CORE" ]] || { ui_fail "Qualified modem core mismatch."; exit 2; }
+python3 - "$ROOT" "$PROVENANCE" >>"$YWD_TNC_LOG_FILE" 2>&1 <<'PY' || { ui_fail "Qualified in-repo HAT support provenance failed."; exit 2; }
+from pathlib import Path
+import hashlib,json,sys
+root=Path(sys.argv[1]); data=json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+if data.get("source_commit") != "c28c46c3478d7931af611923c92cd8f692a00858":
+    raise SystemExit("source commit mismatch")
+entries={item["path"]:item for item in data.get("support_files", [])}
+for rel in ("firmware/hat_control.py", "firmware/probe_hat.py", "firmware/targets.json"):
+    item=entries.get(rel)
+    if not item:
+        raise SystemExit(f"missing provenance entry: {rel}")
+    if hashlib.sha256((root/rel).read_bytes()).hexdigest() != item.get("sha256"):
+        raise SystemExit(f"support digest mismatch: {rel}")
+print("FWM3_HAT_SUPPORT_PROVENANCE=PASS")
+PY
+ui_ok "Qualified in-repo HAT support verified"
 command -v fuser >/dev/null 2>&1 || { ui_fail "fuser is required."; exit 2; }
 
 if fuser "$DEVICE" >/dev/null 2>&1; then

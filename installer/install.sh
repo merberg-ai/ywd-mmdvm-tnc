@@ -43,7 +43,7 @@ raise SystemExit(0 if sys.version_info >= (3,11) else 1)
 PY
 ui_ok "Qualified source and Python runtime verified"
 
-ui_run "Checking product configuration contract" env PYTHONPATH="$ROOT/src:$ROOT/vendor/ywd-1278/src" python3 -m ywdtnc.tncd --config "$ROOT/config/ywd-mmdvm-tnc.example.toml" --framework-self-test
+ui_run "Checking product configuration contract" env PYTHONPATH="$ROOT/src" python3 -m ywdtnc.tncd --config "$ROOT/config/ywd-mmdvm-tnc.example.toml" --framework-self-test
 
 install -d -m 0755 "$PREFIX" "$CONFIG_DIR"
 install -d -m 0750 "$STATE_DIR"
@@ -55,7 +55,7 @@ ui_ok "Product files installed"
 
 rm -rf "$VENV"
 ui_run "Creating isolated Python environment" python3 -m venv "$VENV"
-ui_run "Installing YWD-MMDVM-TNC package" bash -c '"$1/bin/python" -m pip install --upgrade pip setuptools wheel && "$1/bin/python" -m pip install --no-deps "$2/vendor/ywd-1278" && "$1/bin/python" -m pip install --no-deps "$2"' _ "$VENV" "$SOURCE"
+ui_run "Installing YWD-MMDVM-TNC package" bash -c '"$1/bin/python" -m pip install --upgrade pip setuptools wheel && "$1/bin/python" -m pip install --no-deps "$2"' _ "$VENV" "$SOURCE"
 
 if [[ ! -e "$CONFIG" ]]; then
   install -m 0640 "$SOURCE/config/ywd-mmdvm-tnc.example.toml" "$CONFIG"
