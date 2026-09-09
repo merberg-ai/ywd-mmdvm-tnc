@@ -11,10 +11,9 @@ import tomllib
 from ywd1278.modem.rx_config import validate_rx_frequency_hz
 
 from . import (
+    PERMITTED_TX_PROFILES,
     PRODUCT_TARGET,
     QUALIFIED_FIRMWARE_IDENTITY,
-    QUALIFIED_TX_FREQUENCY_HZ,
-    QUALIFIED_TX_POWER,
 )
 
 
@@ -151,12 +150,11 @@ def validate_config(config: TNCConfig) -> None:
         raise TNCConfigurationError("initial AGW support is raw-only and requires agw.raw_only=true")
     if config.required_identity != QUALIFIED_FIRMWARE_IDENTITY:
         raise TNCConfigurationError("firmware.required_identity does not match the qualified AX25R4 image")
-    if config.tx_enabled and (
-        config.frequency_hz != QUALIFIED_TX_FREQUENCY_HZ
-        or config.tx_power != QUALIFIED_TX_POWER
-    ):
+    if config.tx_enabled and (config.frequency_hz, config.tx_power) not in PERMITTED_TX_PROFILES:
         raise TNCConfigurationError(
-            "TX is initially restricted to the physically-qualified 145.050 MHz / power-200 profile"
+            "TX is restricted to the supported profiles: "
+            "145.050 MHz / power-200 (physically qualified) or "
+            "144.390 MHz / power-200 (APRS operational profile)"
         )
 
 
