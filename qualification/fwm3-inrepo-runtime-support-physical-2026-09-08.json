@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "product": "YWD-MMDVM-TNC",
+  "phase": "FWM3",
+  "qualification": "in-repo runtime and HAT support physical build/deploy verification",
+  "date": "2026-09-08",
+  "code_under_test": {
+    "commit": "9d282315d637715fab85ba183637e8c9239064c3",
+    "checkpoint": "checkpoint/runtime-inrepo-support-host-qualified"
+  },
+  "physical_hardware_used": true,
+  "operator_observed": {
+    "guided_installer_completed": true,
+    "inrepo_firmware_build_completed": true,
+    "qualified_artifact_verified": true,
+    "running_firmware_identity_accepted": true,
+    "verified_stock_rollback_backup_found": true,
+    "existing_product_firmware_readback_verified": true,
+    "flash_written": false,
+    "verification_only": true,
+    "post_restart_runtime_verified": true,
+    "service_enabled": true,
+    "service_started": true,
+    "service_running": true
+  },
+  "artifact": {
+    "relative_name": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1-7ff74ed-hse8m.bin",
+    "expected_size_bytes": 59892,
+    "expected_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616"
+  },
+  "rollback": {
+    "verified_backup_directory": "/var/lib/ywd-mmdvm-tnc/firmware-backups/mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021/20260907-172347"
+  },
+  "runtime_configuration_observed": {
+    "frequency_mhz": 145.05,
+    "tx_enabled": true,
+    "kiss_listen": "0.0.0.0",
+    "kiss_port": 8001,
+    "agw_enabled": true,
+    "lan_address_reported": "192.168.1.11"
+  },
+  "safety_observed": {
+    "flash_written": false,
+    "rf_transmitted_during_firmware_operation": false,
+    "option_bytes_written": false
+  },
+  "scope_note": "This run physically qualifies the FWM3 in-repo build and verification/deploy path on the existing qualified firmware. It did not intentionally rewrite main flash because the exact qualified firmware was already installed, and it does not claim a new over-the-air traffic qualification in this run."
+}
