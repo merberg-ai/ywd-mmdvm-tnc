@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "product": "YWD-MMDVM-TNC",
+  "phase": "FWM4-UI-POLISH",
+  "qualification": "NARROW_TERMINAL_SPINNER_SINGLE_ROW_HOST",
+  "status": "PASS",
+  "qualified_local_date": "2026-09-09",
+  "code_under_test_commit": "552c64d1a039c1729a27721db4e348b7608fa6e4",
+  "product_version": "0.1.0a14",
+  "trigger": "Physical updater test on a narrow Termius terminal showed the carriage-return spinner label wrapping, causing each animation frame to appear on a new row.",
+  "fix": "Transient spinner labels are fitted to the current terminal width, reserve wrap-safety columns, truncate long labels with three dots, and clear the row before repainting.",
+  "host_contract": {
+    "narrow_terminal_columns": 40,
+    "long_label_truncated": true,
+    "short_label_preserved": true,
+    "single_row_contract": "PASS",
+    "ci_run_id": 34351839401,
+    "ci_status": "success"
+  },
+  "firmware_behavior_changed": false,
+  "hardware_accessed": false,
+  "flash_written": false,
+  "rf_transmitted": false
+}
