@@ -434,11 +434,14 @@ def main() -> int:
     parser.add_argument("--firmware", default="")
     parser.add_argument("--stock-backup-dir", default="")
     parser.add_argument("--authorize", default="")
+    parser.add_argument("--force-reflash", action="store_true")
     args = parser.parse_args()
 
     try:
         require_root()
         require_tools()
+        if args.force_reflash and args.mode != "flash":
+            raise FlashError("--force-reflash is valid only with flash mode")
         profile = load_profile(PROFILE_PATH)
         verify_core_pin(profile.qualified_core_commit)
         target = load_target(profile.target_id)
@@ -457,6 +460,7 @@ def main() -> int:
         print("AUTOMATIC_FLASH=NO")
         print("RF_TX_PERMITTED=NO")
         print("OPTION_BYTES_PERMITTED=NO")
+        print(f"FORCE_REFLASH={'YES' if args.force_reflash else 'NO'}")
 
         with stopped_known_modem_owners(args.device, restore=args.mode != "flash"):
             identity = probe_identity(args.device, profile.target_id)
@@ -505,7 +509,7 @@ def main() -> int:
             os.close(readback_fd)
             readback_path = Path(readback_name)
             try:
-                if identity == profile.expected_identity:
+                if identity == profile.expected_identity and not args.force_reflash:
                     print(
                         "Exact qualified AX25R4 identity already runs; verifying programmed "
                         "bytes without rewriting main flash."
@@ -558,6 +562,7 @@ def main() -> int:
             )
             print("YWD_TNC_QUALIFIED_FIRMWARE_DEPLOY=PASS")
             print(f"FLASH_WRITTEN={'YES' if flash_written else 'NO'}")
+            print(f"FORCE_REFLASH={'YES' if args.force_reflash else 'NO'}")
             print("PROGRAMMED_READBACK=PASS")
             print("PRODUCT_RUNTIME_IDENTITY_VERIFIED=YES")
             print(f"STOCK_ROLLBACK_VERIFIED={'YES' if backup_dir else 'NO-NOT-REQUIRED-FOR-NO-WRITE'}")

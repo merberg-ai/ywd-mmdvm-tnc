@@ -75,6 +75,7 @@ def main() -> int:
     parser.add_argument("--firmware", default="")
     parser.add_argument("--stock-backup-dir", default="")
     parser.add_argument("--authorize", default="")
+    parser.add_argument("--force-reflash", action="store_true")
     args = parser.parse_args()
     log_path = make_log()
     log = log_path.open("a", encoding="utf-8", buffering=1)
@@ -102,6 +103,8 @@ def main() -> int:
     try:
         qf.require_root()
         qf.require_tools()
+        if args.force_reflash and args.mode != "flash":
+            raise qf.FlashError("--force-reflash is valid only with flash mode")
         profile = qf.load_profile(qf.PROFILE_PATH)
         qf.verify_core_pin(profile.qualified_core_commit)
         target = qf.load_target(profile.target_id)
@@ -158,7 +161,7 @@ def main() -> int:
             os.close(fd)
             readback = Path(readback_name)
             try:
-                if identity == profile.expected_identity:
+                if identity == profile.expected_identity and not args.force_reflash:
                     step("Qualified firmware already installed; verifying programmed bytes")
                     quiet_call(boot.enter)
                     qf.readback_product(profile, args.device, readback)
@@ -169,6 +172,8 @@ def main() -> int:
                         raise qf.FlashError("a verified stock rollback backup is required before any main-flash write")
                     qf.verify_stock_backup(profile, backup_dir)
                     print()
+                    if args.force_reflash and identity == profile.expected_identity:
+                        warn("A forced reflash of the currently accepted firmware was explicitly requested.")
                     warn("A firmware write is ready. The verified stock backup is safe.")
                     prompt = f"Type {profile.final_write_confirmation} to write the qualified image: "
                     response = read_interactive_confirmation(prompt)
@@ -194,6 +199,7 @@ def main() -> int:
             quiet_call(qf.write_ready_record, profile, identity=post_identity, backup_dir=backup_dir, flash_written=flash_written)
             ok("Qualified YWD-MMDVM-TNC firmware is ready")
             print(f"  flash written: {'yes' if flash_written else 'no (verification only)'}")
+            print(f"  force reflash requested: {'yes' if args.force_reflash else 'no'}")
             if backup_dir:
                 print(f"  rollback: {backup_dir}")
             print(f"  log: {log_path}")

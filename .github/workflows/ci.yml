@@ -35,6 +35,9 @@ jobs:
       - name: Public release host contract
         run: bash scripts/check-public-polish.sh
 
+      - name: Firmware updater safety contract
+        run: bash scripts/check-firmware-update-tooling.sh
+
       - name: Firmware profile remains hardware inert
         run: ywd-tnc-fw --profile firmware/product-ax25r4.json show
 
@@ -59,7 +62,7 @@ jobs:
           /tmp/fwm3-venv/bin/python -m pip install --upgrade pip setuptools wheel
           /tmp/fwm3-venv/bin/python -m pip install --no-deps .
           cd /tmp
-          /tmp/fwm3-venv/bin/python -c 'import importlib.metadata as m; import ywdtnc.engine, ywd1278.kiss.sustained, ywd1278.modem.tx_owner, ywd1278.service.tnc_runtime; assert m.version("ywd-mmdvm-tnc") == "0.1.0a11"; print("FWM3_PRODUCT_ONLY_WHEEL_INSTALL=PASS")'
+          /tmp/fwm3-venv/bin/python -c 'import importlib.metadata as m; import ywdtnc, ywdtnc.engine, ywd1278.kiss.sustained, ywd1278.modem.tx_owner, ywd1278.service.tnc_runtime; assert m.version("ywd-mmdvm-tnc") == ywdtnc.__version__; print("FWM3_PRODUCT_ONLY_WHEEL_INSTALL=PASS")'
           if /tmp/fwm3-venv/bin/python -m pip show ywd-1278 >/dev/null 2>&1; then echo "unexpected separate ywd-1278 distribution" >&2; exit 1; fi
           echo FWM3_SEPARATE_YWD1278_DISTRIBUTION_INSTALLED=NO
 

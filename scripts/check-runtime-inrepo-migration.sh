@@ -25,9 +25,10 @@ for path in (root/"src/ywd1278").rglob("*.py"):
     assert not (set(part.lower() for part in path.parts) & forbidden), path
 assert {p.name for p in (root/"src/ywd1278/service").glob("*.py")} <= {"__init__.py","live_channel_access.py","rx_runtime.py","tnc_runtime.py"}
 pyproject=(root/"pyproject.toml").read_text(encoding="utf-8")
-assert 'version = "0.1.0a11"' in pyproject
+import tomllib
+project_version=tomllib.loads(pyproject)["project"]["version"]
 assert 'include = ["ywdtnc*", "ywd1278*"]' in pyproject
-assert '__version__ = "0.1.0a11"' in (root/"src/ywdtnc/__init__.py").read_text(encoding="utf-8")
+assert f'__version__ = "{project_version}"' in (root/"src/ywdtnc/__init__.py").read_text(encoding="utf-8")
 installer=(root/"installer/install.sh").read_text(encoding="utf-8")
 assert '$2/vendor/ywd-1278' not in installer
 assert 'PYTHONPATH="$ROOT/src:$ROOT/vendor/ywd-1278/src"' not in installer
