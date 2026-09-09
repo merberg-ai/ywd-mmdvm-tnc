@@ -14,7 +14,6 @@ from ywd1278.kiss.server import ThreadingKISSServer, start_server_thread, stop_s
 from ywd1278.kiss.sustained import SustainedTNCBackend, ThreadSafeKISSDataAdmissionQueue
 from ywd1278.modem._serial import posix_serial_transport_factory
 from ywd1278.modem.owner import TransportFactory
-from ywd1278.modem.tx_owner import TXModemOwner
 from ywd1278.service.tnc_runtime import SustainedTNCRuntime
 from ywd1278.tx.contextual import ContextualHalfDuplexSubmitter, ContextualTXDelayRouter
 from ywd1278.tx.half_duplex import HalfDuplexParameters
@@ -22,6 +21,7 @@ from ywd1278.tx.half_duplex import HalfDuplexParameters
 from . import QUALIFIED_FIRMWARE_IDENTITY
 from .agw.server import ThreadingAGWServer, start_agw_server_thread, stop_agw_server_thread
 from .config import TNCConfig, validate_config
+from .rf_profiles import ProductTXModemOwner
 
 
 MonotonicClock = Callable[[], float]
@@ -78,7 +78,7 @@ class TNCEngine:
         self._sleep = sleep
         self._random_byte_source = random_byte_source or (lambda: secrets.randbelow(256))
 
-        self.owner: TXModemOwner | None = None
+        self.owner: ProductTXModemOwner | None = None
         self.router: ContextualTXDelayRouter | None = None
         self.lifecycle: ContextualHalfDuplexSubmitter | None = None
         self.admission: ThreadSafeKISSDataAdmissionQueue | None = None
@@ -132,7 +132,7 @@ class TNCEngine:
             raise TNCEngineError("TNC engine cannot be restarted")
         self._started = True
 
-        owner = TXModemOwner(
+        owner = ProductTXModemOwner(
             self._transport_factory,
             queue_capacity=16,
             submit_timeout=0.20,
@@ -157,7 +157,11 @@ class TNCEngine:
                 raise TNCEngineError("modem RF path is not idle before startup")
 
             if self.config.tx_enabled:
-                owner.apply_tx_qualification_profile(timeout=1.5)
+                owner.apply_tx_profile(
+                    self.config.frequency_hz,
+                    self.config.tx_power,
+                    timeout=1.5,
+                )
             else:
                 owner.set_rx_frequency(self.config.frequency_hz, timeout=1.5)
             owner.arm_rx_modem_io(timeout=1.5)
