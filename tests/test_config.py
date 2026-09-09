@@ -73,9 +73,30 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(TNCConfigurationError):
             self._load_text(text)
 
-    def test_unqualified_tx_profile_is_rejected(self) -> None:
+    def test_physically_qualified_packet_tx_profile_is_allowed(self) -> None:
+        text = EXAMPLE.read_text().replace("tx_enabled = false", "tx_enabled = true")
+        config = self._load_text(text)
+        self.assertTrue(config.tx_enabled)
+        self.assertEqual(config.frequency_hz, 145_050_000)
+        self.assertEqual(config.tx_power, 200)
+
+    def test_aprs_tx_profile_is_allowed(self) -> None:
         text = EXAMPLE.read_text().replace("tx_enabled = false", "tx_enabled = true")
         text = text.replace("frequency_mhz = 145.050", "frequency_mhz = 144.390")
+        config = self._load_text(text)
+        self.assertTrue(config.tx_enabled)
+        self.assertEqual(config.frequency_hz, 144_390_000)
+        self.assertEqual(config.tx_power, 200)
+
+    def test_arbitrary_tx_frequency_is_rejected(self) -> None:
+        text = EXAMPLE.read_text().replace("tx_enabled = false", "tx_enabled = true")
+        text = text.replace("frequency_mhz = 145.050", "frequency_mhz = 146.520")
+        with self.assertRaises(TNCConfigurationError):
+            self._load_text(text)
+
+    def test_wrong_tx_power_is_rejected(self) -> None:
+        text = EXAMPLE.read_text().replace("tx_enabled = false", "tx_enabled = true")
+        text = text.replace("tx_power = 200", "tx_power = 199")
         with self.assertRaises(TNCConfigurationError):
             self._load_text(text)
 
