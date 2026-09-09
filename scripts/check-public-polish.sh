@@ -3,6 +3,7 @@ set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 bash "$ROOT/scripts/check-p3-lan-kiss.sh"
+bash "$ROOT/scripts/check-rf-profiles.sh"
 bash "$ROOT/scripts/check-firmware-inrepo-migration.sh"
 bash "$ROOT/scripts/check-runtime-inrepo-migration.sh"
 
@@ -134,7 +135,7 @@ print("PUBLIC_SERVICE_BRANDING=PASS")
 print("PUBLIC_README_CONTRACT=PASS")
 print("PUBLIC_STOCK_HAT_PHYSICAL_EVIDENCE_CONTRACT=PASS")
 print("FWM2_PHYSICAL_FLASH_PERFORMED=NO")
-print("RF_RUNTIME_BEHAVIOR_CHANGED=NO")
+print("RF_RUNTIME_BEHAVIOR_CHANGED=YES_BOUNDED_PROFILE_EXTENSION")
 PY
 
 echo "YWD_TNC_PUBLIC_POLISH_HOST_CONTRACT=PASS"
