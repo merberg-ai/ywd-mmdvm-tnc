@@ -26,7 +26,7 @@ print('FWM4_ACCEPTED_FIRMWARE_REGISTRY=PASS')
 PY
 
 python3 -m py_compile firmware/qualified_flash.py firmware/flash_ui.py
-bash -n update-firmware.sh firmware/update.sh
+bash -n update-firmware.sh firmware/update.sh installer/lib/ui.sh
 
 grep -q -- '--force-reflash' firmware/qualified_flash.py
 grep -q -- '--force-reflash' firmware/flash_ui.py
@@ -58,6 +58,21 @@ test "$actual" = "$expected"
 echo FWM4_WRAPPER_SYMLINK_EXECUTION=PASS
 rm -rf "$tmp"
 trap - EXIT
+
+# A carriage-return spinner must never print a transient label wide enough to
+# wrap. Wrapping makes each animation frame appear on a fresh row in terminals
+# such as Termius. Test the fitting helper directly at a narrow width.
+# shellcheck disable=SC1091
+source installer/lib/ui.sh
+long_label='Building the qualified AX.25 firmware twice from in-repo inputs'
+fitted="$(_ui_fit_spinner_label "$long_label" 40)"
+test "${#fitted}" -le 36
+test "$fitted" != "$long_label"
+test "${fitted: -3}" = '...'
+short_label='Building firmware'
+test "$(_ui_fit_spinner_label "$short_label" 40)" = "$short_label"
+grep -q "printf '\\\\r\\\\033\[K%s%s%s %s'" installer/lib/ui.sh
+echo FWM4_SPINNER_SINGLE_ROW_CONTRACT=PASS
 
 if grep -q -- '--force-reflash' installer/setup.sh; then
   echo 'normal installer must never force reflash' >&2
