@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "product": "YWD-MMDVM-TNC",
+  "phase": "FWM4",
+  "date": "2026-09-08",
+  "status": "PASS",
+  "qualification": "accepted-firmware manual update and explicit same-image reflash host qualification",
+  "physical_hardware_used": false,
+  "code_under_test": {
+    "commit": "961e6e3b52e0592e6675aac39c40278ff7df3a54",
+    "parent_fwm3_physical_evidence_commit": "ab82d71498dd04089fc4a34f482a83f6a2f3a23f",
+    "product_version": "0.1.0a12"
+  },
+  "accepted_firmware_registry": {
+    "path": "firmware/accepted-firmware.json",
+    "active_profile_id": "ax25r4-qualified",
+    "profile_path": "firmware/product-ax25r4.json",
+    "profile_sha256": "2ac50eddf9b5ab6e2c7f9e2ededf50de201535c85c35d3b5f6e87b2a0030bc61",
+    "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021",
+    "artifact_size_bytes": 59892,
+    "artifact_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+    "manual_update_allowed": true,
+    "force_reflash_allowed": true
+  },
+  "behavior_contract": {
+    "normal_installer_same_image_behavior": "verification-only",
+    "manual_updater_force_reflash": "explicit-only",
+    "arbitrary_bin_flash_exposed": false,
+    "verified_stock_rollback_required_before_write": true,
+    "interactive_final_confirmation_required": true,
+    "final_write_confirmation": "WRITE-FIRMWARE-NOW",
+    "programmed_readback_required": true,
+    "runtime_identity_verification_required_after_restart": true,
+    "option_bytes_permitted": false,
+    "rf_transmit_permitted_during_firmware_operation": false,
+    "service_restore_restart_path_present": true
+  },
+  "firmware_equivalence": {
+    "frozen_ywd1278_reference_vs_direct_inrepo": "PASS",
+    "direct_inrepo_vs_production_wrapper": "PASS",
+    "qualified_size_bytes": 59892,
+    "qualified_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+    "firmware_source_behavior_changed": false
+  },
+  "ci": {
+    "workflow_run_id": 34310787500,
+    "host_contract_job_id": 102336850008,
+    "host_contract": "PASS",
+    "firmware_equivalence_job_id": 102336850086,
+    "firmware_equivalence": "PASS",
+    "runtime_equivalence_job_id": 102336850784,
+    "runtime_equivalence": "SKIPPED-AS-EXPECTED-ON-FIRMWARE-BRANCH"
+  },
+  "host_safety_markers": {
+    "hardware_accessed": false,
+    "gpio_accessed": false,
+    "modem_uart_opened": false,
+    "flash_written": false,
+    "rf_transmitted": false
+  },
+  "scope_note": "This qualification proves the updater selection, safety, packaging and same-image force-reflash control path on the host only. A physical write/readback/restart test is still required before FWM4 is physically qualified."
+}
