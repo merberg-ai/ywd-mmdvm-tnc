@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "phase": "FWM3",
+  "status": "PASS",
+  "date_local": "2026-09-08",
+  "product": "YWD-MMDVM-TNC",
+  "product_version": "0.1.0a11",
+  "isolated_branch": "runtime/inrepo-cutover",
+  "parent_fwm2_checkpoint_commit": "8b0460d82e3b7739f4e9787f50a0c0cada6a8478",
+  "code_under_test_commit": "a39dfc7600ed32c9905646ad3b0d6c9a5fd7b0f4",
+  "code_under_test_tree": "6cb9b3e80cd39fded52c43f93cdabd488ea8bbc8",
+  "source_runtime_repository": "merberg-ai/ywd-1278",
+  "source_runtime_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+  "runtime_migration": {
+    "runtime_files": 33,
+    "runtime_git_blob_equivalence": "PASS",
+    "runtime_byte_equivalence": "PASS",
+    "runtime_sha256_equivalence": "PASS",
+    "forbidden_product_layers_absent": "PASS",
+    "forbidden_product_layers": [
+      "bbs",
+      "beacon",
+      "console",
+      "forwarding",
+      "mailbox",
+      "node"
+    ],
+    "product_package_discovery": "PASS",
+    "product_only_wheel_install": "PASS",
+    "separate_ywd1278_distribution_installed": false,
+    "installer_separate_vendor_pip_dependency": false
+  },
+  "hat_support_migration": {
+    "support_files": [
+      "firmware/hat_control.py",
+      "firmware/probe_hat.py",
+      "firmware/targets.json"
+    ],
+    "support_file_count": 3,
+    "support_git_blob_equivalence": "PASS",
+    "support_byte_equivalence": "PASS",
+    "support_sha256_equivalence": "PASS",
+    "probe_support_source": "IN_REPO",
+    "flash_support_source": "IN_REPO"
+  },
+  "fwm2_contract": {
+    "runtime_composition_out_of_scope": true,
+    "firmware_build_contract_preserved": "PASS",
+    "engineering_blobs_exact": "PASS",
+    "tooling_blobs_exact": "PASS",
+    "builder_blob_exact": "PASS",
+    "qualified_toolchain_provenance": "PASS",
+    "production_firmware_build_source": "IN_REPO",
+    "installer_flash_behavior_changed": false
+  },
+  "host_regression": {
+    "product_tests": 30,
+    "product_tests_result": "PASS",
+    "framework_self_test": "PASS",
+    "p1_pre_rf_host_contract": "PASS",
+    "p2_pre_rf_host_contract": "PASS",
+    "p3_lan_kiss_host_contract": "PASS",
+    "public_polish_host_contract": "PASS",
+    "persistent_tx_default_changed": false,
+    "rf_runtime_behavior_changed": false
+  },
+  "ci": {
+    "workflow": "ywd-mmdvm-tnc-ci",
+    "run_id": 34307566405,
+    "run_number": 68,
+    "head_sha": "a39dfc7600ed32c9905646ad3b0d6c9a5fd7b0f4",
+    "conclusion": "success",
+    "host_contract": {
+      "job_id": 102327325001,
+      "conclusion": "success"
+    },
+    "runtime_inrepo_equivalence": {
+      "job_id": 102327325742,
+      "conclusion": "success"
+    },
+    "firmware_inrepo_equivalence": {
+      "job_id": 102327325840,
+      "conclusion": "skipped",
+      "reason": "FWM3 runtime branch does not request the firmware-only equivalence job; the FWM2 host contract still ran inside the public host contract"
+    }
+  },
+  "physical_requalification": {
+    "performed": false,
+    "reason": "FWM3 copies the frozen runtime and HAT-support files byte-for-byte and changes only packaging/provenance/path composition; no modem/RF algorithm or firmware bytes changed"
+  },
+  "safety": {
+    "hardware_accessed": false,
+    "modem_uart_opened": false,
+    "gpio_accessed": false,
+    "flash_written": false,
+    "option_bytes_written": false,
+    "rf_transmitted": false
+  }
+}
