@@ -72,6 +72,7 @@ ln -sfn "$VENV/bin/ywd-tnc-fw" /usr/local/bin/ywd-tnc-fw
 ln -sfn "$SOURCE/update-firmware.sh" /usr/local/bin/ywd-update-firmware
 ln -sfn "$VENV/bin/ywd-tnc-rx-gate" /usr/local/bin/ywd-tnc-rx-gate
 ln -sfn "$VENV/bin/ywd-tnc-p2-gate" /usr/local/bin/ywd-tnc-p2-gate 2>/dev/null || true
+ln -sfn "$VENV/bin/ywd-tnc-profile" /usr/local/bin/ywd-tnc-profile
 
 ui_run "Validating installed service configuration" "$VENV/bin/ywd-tncd" --config "$CONFIG" --framework-self-test
 ui_ok "YWD-MMDVM-TNC installed"
