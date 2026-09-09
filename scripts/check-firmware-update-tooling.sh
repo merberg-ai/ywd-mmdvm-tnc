@@ -38,19 +38,24 @@ grep -q 'accepted-firmware.json' firmware/update.sh
 grep -q 'ywd-update-firmware' installer/install.sh
 grep -q 'readlink -f -- "${BASH_SOURCE\[0\]}"' update-firmware.sh
 
-# Regression for the physical FWM4 failure: when the wrapper is reached through
-# /usr/local/bin-style symlinking, its real source path must resolve back to the
-# installed product tree rather than /usr/local/bin.
+# Regression for the physical FWM4 failure. Execute the real wrapper through an
+# /usr/local/bin-style symlink, but make its resolved firmware/update.sh target a
+# harmless fixture. The wrapper must reach the fixture in the product source
+# tree, never /usr/local/bin/firmware/update.sh.
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 mkdir -p "$tmp/usr/local/bin" "$tmp/opt/ywd-mmdvm-tnc/source/firmware"
 cp update-firmware.sh "$tmp/opt/ywd-mmdvm-tnc/source/update-firmware.sh"
+cat >"$tmp/opt/ywd-mmdvm-tnc/source/firmware/update.sh" <<'SH'
+#!/usr/bin/env bash
+printf 'FWM4_WRAPPER_TARGET=%s\n' "$0"
+SH
+chmod +x "$tmp/opt/ywd-mmdvm-tnc/source/update-firmware.sh" "$tmp/opt/ywd-mmdvm-tnc/source/firmware/update.sh"
 ln -s "$tmp/opt/ywd-mmdvm-tnc/source/update-firmware.sh" "$tmp/usr/local/bin/ywd-update-firmware"
-resolved="$(readlink -f "$tmp/usr/local/bin/ywd-update-firmware")"
-resolved_root="$(cd -- "$(dirname -- "$resolved")" && pwd)"
-test "$resolved_root" = "$tmp/opt/ywd-mmdvm-tnc/source"
-test "$resolved_root/firmware/update.sh" = "$tmp/opt/ywd-mmdvm-tnc/source/firmware/update.sh"
-echo FWM4_WRAPPER_SYMLINK_ROOT_RESOLUTION=PASS
+actual="$($tmp/usr/local/bin/ywd-update-firmware)"
+expected="FWM4_WRAPPER_TARGET=$tmp/opt/ywd-mmdvm-tnc/source/firmware/update.sh"
+test "$actual" = "$expected"
+echo FWM4_WRAPPER_SYMLINK_EXECUTION=PASS
 rm -rf "$tmp"
 trap - EXIT
 
