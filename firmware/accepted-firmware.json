@@ -1,0 +1,18 @@
+{
+  "active_profile_id": "ax25r4-qualified",
+  "product": "YWD-MMDVM-TNC",
+  "profiles": [
+    {
+      "artifact_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+      "artifact_size_bytes": 59892,
+      "expected_identity": "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed",
+      "force_reflash_allowed": true,
+      "id": "ax25r4-qualified",
+      "manual_update_allowed": true,
+      "path": "firmware/product-ax25r4.json",
+      "profile_sha256": "2ac50eddf9b5ab6e2c7f9e2ededf50de201535c85c35d3b5f6e87b2a0030bc61",
+      "target_id": "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
+    }
+  ],
+  "schema": 1
+}

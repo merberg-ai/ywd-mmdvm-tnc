@@ -227,6 +227,16 @@ The project has been physically tested with remote LinBPQ over LAN TCP KISS in
 both directions, including sustained connected-mode traffic and multi-frame
 transfers. Qualification records are stored under `qualification/`.
 
+## Firmware updates and explicit reflashing
+
+The normal installer is intentionally conservative: if the exact accepted firmware is already running, it verifies programmed bytes instead of rewriting flash. For an explicit firmware update or a deliberate reflash of the active accepted image, use:
+
+```bash
+sudo ywd-update-firmware
+```
+
+The updater does **not** accept an arbitrary `.bin`. It loads the repository-owned `firmware/accepted-firmware.json` registry, verifies the exact active profile and artifact, requires a verified stock rollback backup, and still requires the interactive `WRITE-FIRMWARE-NOW` confirmation before main flash is written. Programmed bytes are read back and verified before the HAT is restarted. This is also the intended path for future qualified firmware revisions.
+
 ## Firmware
 
 The RF-critical modem firmware remains the exact physically-qualified AX25R4
