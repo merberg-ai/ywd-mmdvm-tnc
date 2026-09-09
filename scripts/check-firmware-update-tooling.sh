@@ -26,6 +26,7 @@ print('FWM4_ACCEPTED_FIRMWARE_REGISTRY=PASS')
 PY
 
 python3 -m py_compile firmware/qualified_flash.py firmware/flash_ui.py
+bash -n update-firmware.sh firmware/update.sh
 
 grep -q -- '--force-reflash' firmware/qualified_flash.py
 grep -q -- '--force-reflash' firmware/flash_ui.py
@@ -35,6 +36,23 @@ grep -q 'verified stock rollback backup is required' firmware/update.sh
 grep -q -- '--force-reflash </dev/tty' firmware/update.sh
 grep -q 'accepted-firmware.json' firmware/update.sh
 grep -q 'ywd-update-firmware' installer/install.sh
+grep -q 'readlink -f -- "${BASH_SOURCE\[0\]}"' update-firmware.sh
+
+# Regression for the physical FWM4 failure: when the wrapper is reached through
+# /usr/local/bin-style symlinking, its real source path must resolve back to the
+# installed product tree rather than /usr/local/bin.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+mkdir -p "$tmp/usr/local/bin" "$tmp/opt/ywd-mmdvm-tnc/source/firmware"
+cp update-firmware.sh "$tmp/opt/ywd-mmdvm-tnc/source/update-firmware.sh"
+ln -s "$tmp/opt/ywd-mmdvm-tnc/source/update-firmware.sh" "$tmp/usr/local/bin/ywd-update-firmware"
+resolved="$(readlink -f "$tmp/usr/local/bin/ywd-update-firmware")"
+resolved_root="$(cd -- "$(dirname -- "$resolved")" && pwd)"
+test "$resolved_root" = "$tmp/opt/ywd-mmdvm-tnc/source"
+test "$resolved_root/firmware/update.sh" = "$tmp/opt/ywd-mmdvm-tnc/source/firmware/update.sh"
+echo FWM4_WRAPPER_SYMLINK_ROOT_RESOLUTION=PASS
+rm -rf "$tmp"
+trap - EXIT
 
 if grep -q -- '--force-reflash' installer/setup.sh; then
   echo 'normal installer must never force reflash' >&2
