@@ -79,10 +79,43 @@ ui_fail() {
   ui_log "FAIL: $*"
 }
 
+_ui_terminal_cols() {
+  local cols=""
+  if command -v tput >/dev/null 2>&1 && [[ "${TERM:-dumb}" != "dumb" ]]; then
+    cols="$(tput cols 2>/dev/null || true)"
+  fi
+  if [[ ! "$cols" =~ ^[0-9]+$ || "$cols" -lt 8 ]]; then
+    cols="${COLUMNS:-80}"
+  fi
+  if [[ ! "$cols" =~ ^[0-9]+$ || "$cols" -lt 8 ]]; then
+    cols=80
+  fi
+  printf '%s' "$cols"
+}
+
+_ui_fit_spinner_label() {
+  local label=$1 cols=${2:-80} max
+  [[ "$cols" =~ ^[0-9]+$ ]] || cols=80
+  (( cols >= 8 )) || cols=8
+  # Reserve four columns for the spinner, separating space and wrap safety.
+  # Keeping the transient frame below the terminal width prevents terminals
+  # such as Termius from wrapping a carriage-return spinner onto new rows.
+  max=$((cols - 4))
+  if (( ${#label} <= max )); then
+    printf '%s' "$label"
+  elif (( max <= 3 )); then
+    printf '%.*s' "$max" "$label"
+  else
+    printf '%.*s...' "$((max - 3))" "$label"
+  fi
+}
+
 _ui_spinner() {
-  local pid=$1 label=$2 delay=0.1 frames='|/-\\' i=0
+  local pid=$1 label=$2 delay=0.1 frames='|/-\\' i=0 cols fitted
   while kill -0 "$pid" 2>/dev/null; do
-    printf '\r%s%s%s %s' "$UI_CYAN" "${frames:i++%4:1}" "$UI_RESET" "$label"
+    cols="$(_ui_terminal_cols)"
+    fitted="$(_ui_fit_spinner_label "$label" "$cols")"
+    printf '\r\033[K%s%s%s %s' "$UI_CYAN" "${frames:i++%4:1}" "$UI_RESET" "$fitted"
     sleep "$delay"
   done
   printf '\r\033[K'
