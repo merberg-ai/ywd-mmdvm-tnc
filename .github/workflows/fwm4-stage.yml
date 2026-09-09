@@ -20,7 +20,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Apply deterministic updater transformation
-        run: python3 scripts/fwm4-stage-update-tool.py
+        run: |
+          python3 scripts/fwm4-stage-update-tool.py
+          python3 scripts/fwm4-fix-fwm3-contract.py
       - name: Verify updater host contract
         run: bash scripts/check-firmware-update-tooling.sh
       - name: Verify existing public host contract
@@ -39,7 +41,7 @@ jobs:
           git add README.md pyproject.toml src/ywdtnc/__init__.py \
             firmware/qualified_flash.py firmware/flash_ui.py firmware/accepted-firmware.json \
             firmware/update.sh update-firmware.sh installer/install.sh \
-            scripts/check-firmware-update-tooling.sh
+            scripts/check-firmware-update-tooling.sh scripts/check-runtime-inrepo-migration.sh
           git diff --cached --check
           git commit -m "[fwm4-stage] add accepted-firmware update/reflash tool"
           git push origin HEAD:firmware/update-tooling
