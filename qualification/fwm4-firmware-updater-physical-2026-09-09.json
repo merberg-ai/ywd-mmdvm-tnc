@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "product": "YWD-MMDVM-TNC",
+  "phase": "FWM4",
+  "qualification": "ACCEPTED_FIRMWARE_UPDATER_SAME_IMAGE_FORCE_REFLASH_PHYSICAL",
+  "status": "PASS",
+  "qualified_local_date": "2026-09-09",
+  "code_under_test_commit": "77735160dbd9a54f699cc8eed130108d1b747a68",
+  "product_version": "0.1.0a13",
+  "accepted_profile": "firmware/product-ax25r4.json",
+  "accepted_artifact_size_bytes": 59892,
+  "accepted_artifact_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+  "physical_hardware_used": true,
+  "operator_report": {
+    "accepted_firmware_built_successfully": true,
+    "same_accepted_firmware_force_reflashed_successfully": true,
+    "updater_worked_as_expected": true
+  },
+  "notes": [
+    "The physical test deliberately reflashed the already-qualified accepted firmware image to exercise the explicit firmware-update path without changing modem behavior.",
+    "The operator reported a cosmetic terminal UI issue during firmware build: the spinner status label wrapped on a narrow terminal, causing each animation frame to appear on a new line. This did not affect build or flash behavior and is handled in a subsequent UI-only fix."
+  ]
+}
