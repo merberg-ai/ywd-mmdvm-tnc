@@ -1,0 +1,108 @@
+{
+  "schema": 1,
+  "qualification": "monitor-events-host",
+  "date": "2026-09-10",
+  "result": "PASS",
+  "physical_qualification": "PENDING",
+  "branch": "runtime/monitor-events",
+  "branch_base": {
+    "ref": "dev",
+    "commit_at_branch_creation": "2e66ff7d098250b8a611d46d976050d147d747b9",
+    "note": "dev and main advanced independently after this feature branch was created; monitor-events work did not move either ref"
+  },
+  "code_under_test": "ac2f89309f3b88ea463eb057df8b46904ec07420",
+  "package_version": "0.1.0a16",
+  "monitor_protocol": {
+    "schema": 1,
+    "transport": "TCP NDJSON",
+    "default_endpoint": "127.0.0.1:8002",
+    "history_replay": false,
+    "command_api": false,
+    "transmit_api": false,
+    "subscriber_backpressure": "bounded queue; monitor event drop only",
+    "events": [
+      "rx.frame",
+      "tx.submitted",
+      "tx.queued",
+      "tx.channel_clear",
+      "tx.dispatched",
+      "tx.complete",
+      "tx.rejected",
+      "tx.timeout",
+      "tx.failed"
+    ]
+  },
+  "successful_tx_event_contract": [
+    "tx.submitted",
+    "tx.queued",
+    "tx.channel_clear",
+    "tx.dispatched",
+    "tx.complete"
+  ],
+  "packet_logger": {
+    "entry_point": "ywd-packetlog",
+    "service": "ywd-packetlog.service",
+    "source": "product monitor stream, not KISS",
+    "human_log": "/var/log/ywd-packetlog/YYYY-MM-DD.log",
+    "structured_log": "/var/log/ywd-packetlog/YYYY-MM-DD.jsonl",
+    "auto_enable": "explicit operator opt-in or migration of an already-enabled legacy logger",
+    "transmit_api": false
+  },
+  "upgrade_contract": {
+    "pre_monitor_config_valid": true,
+    "missing_monitor_defaults_disabled": true,
+    "existing_config_preserved": true,
+    "monitor_block_append_has_backup": true,
+    "legacy_kiss_logger_migration_supported": true,
+    "new_packet_logging_default": "disabled until explicit operator opt-in"
+  },
+  "physical_gate": {
+    "path": "scripts/monitor-events-physical.sh",
+    "gate_generated_transmission": false,
+    "operator_stimulus": "XRouter sysop: C 1 !KJ6YWD-5, wait for YWDNOD response, disconnect cleanly",
+    "requires_real_rx_frame": true,
+    "requires_ordered_successful_tx_lifecycle": true,
+    "requires_channel_clear_raw_rssi": true,
+    "requires_positive_selector_count": true,
+    "expected_pass_markers": [
+      "MONITOR_EVENTS_PHYSICAL_GATE=PASS",
+      "LOGGER_JSONL_VALID=PASS",
+      "TX_AUTOMATIC_RETRY_ADDED=NO"
+    ]
+  },
+  "ci": {
+    "workflow_run": 34497731078,
+    "workflow_conclusion": "success",
+    "head_sha": "ac2f89309f3b88ea463eb057df8b46904ec07420",
+    "host_contract_job": 102940355082,
+    "host_contract_conclusion": "success",
+    "runtime_inrepo_equivalence_job": 102940354867,
+    "runtime_inrepo_equivalence_conclusion": "success",
+    "full_unittest_count": 56,
+    "full_unittest_result": "PASS",
+    "dedicated_monitor_contract": "PASS",
+    "monitor_contract_tests": 13,
+    "packetlog_contract_tests": 3
+  },
+  "frozen_runtime": {
+    "qualified_core_commit": "c28c46c3478d7931af611923c92cd8f692a00858",
+    "runtime_files": 33,
+    "runtime_blobs_exact": true,
+    "hat_support_blobs_exact": true,
+    "product_monitor_changes_under_src_ywd1278": false
+  },
+  "firmware": {
+    "artifact_size_bytes": 59892,
+    "artifact_sha256": "b06fcbf0baa36e865198091cee27c66e1624ef08117ee685253a7a5613c7c616",
+    "firmware_behavior_changed_by_monitor_feature": false
+  },
+  "host_safety": {
+    "hardware_accessed": false,
+    "gpio_accessed": false,
+    "modem_uart_opened": false,
+    "flash_written": false,
+    "rf_transmitted": false,
+    "automatic_tx_retry_added": false
+  },
+  "next_gate": "Install host-qualified checkpoint on the running XRouter/YWD-MMDVM-TNC Pi and run scripts/monitor-events-physical.sh"
+}
