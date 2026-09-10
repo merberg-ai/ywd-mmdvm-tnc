@@ -41,6 +41,7 @@ class TNCConfig:
     slottime: int
     kiss: ListenerConfig
     agw: ListenerConfig
+    monitor: ListenerConfig
     agw_raw_only: bool
     required_identity: str
 
@@ -127,6 +128,16 @@ def _listener(table: dict, label: str) -> ListenerConfig:
     return config
 
 
+def _monitor_listener(root: dict) -> ListenerConfig:
+    value = root.get("monitor")
+    if value is None:
+        # Backward-compatible behavior for pre-monitor installed configs.
+        return ListenerConfig(False, "127.0.0.1", 8002, False)
+    if not isinstance(value, dict):
+        raise TNCConfigurationError("missing or invalid [monitor] table")
+    return _listener(value, "monitor")
+
+
 def validate_config(config: TNCConfig) -> None:
     if config.target != PRODUCT_TARGET:
         raise TNCConfigurationError(f"hardware.target must be {PRODUCT_TARGET!r}")
@@ -171,6 +182,7 @@ def load_config(path: str | Path) -> TNCConfig:
     packet = _table(root, "packet")
     kiss = _table(root, "kiss")
     agw = _table(root, "agw")
+    monitor = _monitor_listener(root)
     firmware = _table(root, "firmware")
 
     baud = _int(packet, "baud")
@@ -196,6 +208,7 @@ def load_config(path: str | Path) -> TNCConfig:
         slottime=slottime_ms // 10,
         kiss=_listener(kiss, "kiss"),
         agw=_listener(agw, "agw"),
+        monitor=monitor,
         agw_raw_only=_bool(agw, "raw_only"),
         required_identity=_string(firmware, "required_identity"),
     )
