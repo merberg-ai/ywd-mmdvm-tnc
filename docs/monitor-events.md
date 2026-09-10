@@ -103,6 +103,9 @@ frame_bytes
 frame_hex
 ```
 
+A repeated digipeater in `path` is suffixed with `*`, matching conventional
+packet-monitor notation.
+
 ### TX lifecycle meaning
 
 The successful TX sequence is intentionally tied to existing product
@@ -194,26 +197,85 @@ The logger writes two daily files:
 The `.log` file is human-readable. The `.jsonl` file preserves each schema-1
 event object for later analysis, dashboards, statistics, or telemetry tools.
 
-Example human output:
+The human log uses compact packet-monitor notation for connected-mode control
+fields, including examples such as `RR6-`, `SABM+`, and `I35+`:
 
 ```text
-2026-09-10 08:24:31.517 RX KE6CHO-5>KJ6YWD-5 RR
-2026-09-10 08:24:42.101 TX QUEUED #17 KJ6YWD-11>KJ6YWD-5
-2026-09-10 08:24:42.304 TX CHANNEL-CLEAR #17 KJ6YWD-11>KJ6YWD-5 raw_rssi=143
-2026-09-10 08:24:42.612 TX DISPATCHED #17 KJ6YWD-11>KJ6YWD-5 selectors=2840
-2026-09-10 08:24:43.091 TX COMPLETE #17 KJ6YWD-11>KJ6YWD-5
+2026-09-10 08:24:31.517 RX fm KE6CHO-5 to KJ6YWD-11 ctl RR6- len=0
+2026-09-10 08:24:42.101 TX QUEUED #17 fm KJ6YWD-11 to KJ6YWD-5 ctl SABM+ len=0
+2026-09-10 08:24:42.304 TX CHANNEL-CLEAR #17 fm KJ6YWD-11 to KJ6YWD-5 ctl SABM+ len=0 raw_rssi=143
+2026-09-10 08:24:42.612 TX DISPATCHED #17 fm KJ6YWD-11 to KJ6YWD-5 ctl SABM+ len=0 selectors=2840
+2026-09-10 08:24:43.091 TX COMPLETE #17 fm KJ6YWD-11 to KJ6YWD-5 ctl SABM+ len=0
 ```
 
-Exact frame/control formatting depends on the received AX.25 frame.
+Exact frame/control fields depend on the AX.25 traffic observed.
 
-## Qualification boundary
+## Host qualification
 
-Host tests prove protocol framing, live-only semantics, bounded non-blocking
-fan-out, configuration compatibility, packet-log persistence, and successful /
-timeout / downstream-failure TX event ordering without opening a modem UART or
-transmitting RF.
+Host tests cover:
 
-A real Pi/HAT test is still required before the monitor feature is considered
-physically qualified. The physical gate verifies the monitor listener, logger,
-real RF RX, and the successful TX event ordering while XRouter continues to use
-the normal TCP KISS interface.
+- monitor NDJSON framing and live-only behavior;
+- ignored client input / absence of a monitor transmit API;
+- bounded non-blocking subscriber fan-out;
+- backward-compatible configuration loading;
+- safe loopback defaults and listener bind validation;
+- human plus lossless JSONL persistence;
+- successful `queued -> channel_clear -> dispatched -> complete` ordering;
+- terminal timeout and downstream-failure ordering;
+- installer migration from the earlier KISS-sniffing packet logger;
+- shell syntax and observation-only behavior of the physical gate.
+
+The normal CI host checks remain hardware inert: they do not open the modem
+UART, touch GPIO, write flash, or transmit RF. Runtime-equivalence CI also
+continues to require the migrated `src/ywd1278/` closure and HAT support to be
+byte-identical to the frozen qualified source.
+
+## Physical qualification gate
+
+The feature is not considered physically qualified until it is exercised on a
+real Pi/HAT while a real packet application is using TCP KISS.
+
+After installing the host-qualified monitor-events checkpoint, verify that
+`ywd-mmdvm-tnc.service` and `ywd-packetlog.service` are running, then launch:
+
+```bash
+sudo bash /opt/ywd-mmdvm-tnc/source/scripts/monitor-events-physical.sh
+```
+
+The gate itself never sends a KISS frame and never requests RF transmission. It
+only snapshots the logger and waits for the operator to generate one ordinary
+packet exchange from the already-running application.
+
+For the YWDXR/XRouter qualification, the requested stimulus is one direct AX.25
+connection from the XRouter sysop console:
+
+```text
+C 1 !KJ6YWD-5
+```
+
+Wait for YWDNOD to answer and reach its prompt, disconnect cleanly, then return
+to the physical-gate terminal and press Enter.
+
+The analyzer considers only monitor records written after its baseline. A pass
+requires at least one real `rx.frame` and one request with this ordered sequence:
+
+```text
+tx.submitted
+  > tx.queued
+  > tx.channel_clear
+  > tx.dispatched
+  > tx.complete
+```
+
+It additionally requires `raw_rssi` at channel-clear, a positive
+`selector_count` at dispatch, valid schema-1 JSONL records, and no `tx.failed`
+for the qualifying request. Success ends with markers including:
+
+```text
+MONITOR_EVENTS_PHYSICAL_GATE=PASS
+LOGGER_JSONL_VALID=PASS
+TX_AUTOMATIC_RETRY_ADDED=NO
+```
+
+Until those markers are obtained from the real station, the monitor event
+feature remains host-qualified only.
