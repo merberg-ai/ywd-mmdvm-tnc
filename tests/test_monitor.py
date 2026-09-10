@@ -14,12 +14,14 @@ class MonitorTests(unittest.TestCase):
         frame = build_ui_frame(
             source=Address("KJ6YWD", 11),
             destination=Address("BEACON"),
+            path=(Address("KRDG", flag=True), Address("WOODY")),
             info=b"YWDXR TEST",
             include_fcs=False,
         )
         fields = frame_fields(frame)
         self.assertEqual(fields["source"], "KJ6YWD-11")
         self.assertEqual(fields["destination"], "BEACON")
+        self.assertEqual(fields["path"], ["KRDG*", "WOODY"])
         self.assertEqual(fields["frame_type"], "UI")
         self.assertEqual(fields["info_text"], "YWDXR TEST")
 
