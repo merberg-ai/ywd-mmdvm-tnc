@@ -19,6 +19,7 @@ CONFIG_DIR=/etc/ywd-mmdvm-tnc
 CONFIG="$CONFIG_DIR/config.toml"
 STATE_DIR=/var/lib/ywd-mmdvm-tnc
 SERVICE=/etc/systemd/system/ywd-mmdvm-tnc.service
+PACKETLOG_SERVICE=/etc/systemd/system/ywd-packetlog.service
 
 ui_header "Installing YWD-MMDVM-TNC"
 
@@ -65,7 +66,8 @@ else
 fi
 
 install -m 0644 "$SOURCE/systemd/ywd-mmdvm-tnc.service" "$SERVICE"
-ui_run "Registering system service" systemctl daemon-reload
+install -m 0644 "$SOURCE/systemd/ywd-packetlog.service" "$PACKETLOG_SERVICE"
+ui_run "Registering system services" systemctl daemon-reload
 
 ln -sfn "$VENV/bin/ywd-tncd" /usr/local/bin/ywd-tncd
 ln -sfn "$VENV/bin/ywd-tnc-fw" /usr/local/bin/ywd-tnc-fw
@@ -73,8 +75,9 @@ ln -sfn "$SOURCE/update-firmware.sh" /usr/local/bin/ywd-update-firmware
 ln -sfn "$VENV/bin/ywd-tnc-rx-gate" /usr/local/bin/ywd-tnc-rx-gate
 ln -sfn "$VENV/bin/ywd-tnc-p2-gate" /usr/local/bin/ywd-tnc-p2-gate 2>/dev/null || true
 ln -sfn "$VENV/bin/ywd-tnc-profile" /usr/local/bin/ywd-tnc-profile
+ln -sfn "$VENV/bin/ywd-packetlog" /usr/local/bin/ywd-packetlog
 
 ui_run "Validating installed service configuration" "$VENV/bin/ywd-tncd" --config "$CONFIG" --framework-self-test
 ui_ok "YWD-MMDVM-TNC installed"
-ui_log "QUALIFIED_CORE_COMMIT=$QUALIFIED_CORE CONFIG=$CONFIG SERVICE=$SERVICE"
+ui_log "QUALIFIED_CORE_COMMIT=$QUALIFIED_CORE CONFIG=$CONFIG SERVICE=$SERVICE PACKETLOG_SERVICE=$PACKETLOG_SERVICE"
 printf 'Log: %s\n' "$YWD_TNC_LOG_FILE"
