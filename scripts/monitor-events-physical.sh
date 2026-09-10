@@ -3,6 +3,8 @@ set -Eeuo pipefail
 
 CONFIG=${YWD_TNC_CONFIG:-/etc/ywd-mmdvm-tnc/config.toml}
 LOGDIR=${YWD_PACKETLOG_DIR:-/var/log/ywd-packetlog}
+SOURCE=${YWD_TNC_SOURCE:-/opt/ywd-mmdvm-tnc/source}
+VENV=${YWD_TNC_VENV:-/opt/ywd-mmdvm-tnc/venv}
 TNC_SERVICE=ywd-mmdvm-tnc.service
 LOGGER_SERVICE=ywd-packetlog.service
 
@@ -11,6 +13,8 @@ fail() {
   exit 1
 }
 
+[[ ${EUID:-$(id -u)} -eq 0 ]] || fail "run with sudo bash $SOURCE/scripts/monitor-events-physical.sh"
+
 printf '%s\n' '============================================================'
 printf '%s\n' ' YWD-MMDVM-TNC MONITOR EVENTS - PHYSICAL GATE'
 printf '%s\n' ' XRouter / TCP KISS / real HAT / real RF'
@@ -18,8 +22,28 @@ printf '%s\n' '============================================================'
 printf '\n'
 
 [[ -r "$CONFIG" ]] || fail "cannot read $CONFIG"
+[[ -x "$VENV/bin/python" ]] || fail "installed product venv not found at $VENV"
 systemctl is-active --quiet "$TNC_SERVICE" || fail "$TNC_SERVICE is not active"
 systemctl is-active --quiet "$LOGGER_SERVICE" || fail "$LOGGER_SERVICE is not active"
+
+INSTALLED_VERSION="$($VENV/bin/python - <<'PY'
+import ywdtnc
+print(ywdtnc.__version__)
+PY
+)"
+[[ "$INSTALLED_VERSION" == 0.1.0a16 ]] || fail "physical gate expects ywd-mmdvm-tnc 0.1.0a16; got $INSTALLED_VERSION"
+
+INSTALLED_COMMIT=UNKNOWN
+if [[ -d "$SOURCE/.git" || -f "$SOURCE/.git" ]]; then
+  INSTALLED_COMMIT="$(git -c safe.directory='*' -C "$SOURCE" rev-parse HEAD 2>/dev/null || printf UNKNOWN)"
+fi
+
+LOGGER_EXEC="$(systemctl show "$LOGGER_SERVICE" -p ExecStart --value 2>/dev/null || true)"
+[[ "$LOGGER_EXEC" == *"/opt/ywd-mmdvm-tnc/venv/bin/ywd-packetlog"* ]] || fail "ywd-packetlog.service is not using the product monitor client"
+if pgrep -af '/usr/local/lib/ywd-packetlog.py' >/dev/null 2>&1; then
+  pgrep -af '/usr/local/lib/ywd-packetlog.py' >&2 || true
+  fail "legacy KISS-sniffing ywd-packetlog process is still running"
+fi
 
 readarray -t cfg < <(python3 - "$CONFIG" <<'PY'
 import sys, tomllib
@@ -48,8 +72,12 @@ with socket.create_connection(('127.0.0.1', 8002), timeout=2.0):
     pass
 PY
 
+printf 'PRODUCT_VERSION=%s\n' "$INSTALLED_VERSION"
+printf 'PRODUCT_COMMIT=%s\n' "$INSTALLED_COMMIT"
 printf 'TNC_SERVICE=ACTIVE\n'
 printf 'PACKETLOGGER_SERVICE=ACTIVE\n'
+printf 'PACKETLOGGER_SOURCE=PRODUCT_MONITOR_CLIENT\n'
+printf 'LEGACY_KISS_LOGGER_RUNNING=NO\n'
 printf 'MONITOR_LISTENER=127.0.0.1:8002\n'
 printf 'KISS_LISTENER=%s:%s\n' "${cfg[4]:-?}" "${cfg[5]:-?}"
 
@@ -61,6 +89,8 @@ fi
 
 printf '\nCurrent TCP/8001 connections:\n'
 ss -tn 2>/dev/null | grep ':8001' || true
+printf '\nCurrent TCP/8002 connections:\n'
+ss -tn 2>/dev/null | grep ':8002' || true
 
 TODAY="$(date +%F)"
 JSONL="$LOGDIR/$TODAY.jsonl"
