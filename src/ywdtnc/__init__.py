@@ -1,6 +1,6 @@
 """YWD-MMDVM-TNC modem-only product layer."""
 
-__version__ = "0.1.0a15"
+__version__ = "0.1.0a16"
 
 PRODUCT_TARGET = "mmdvm-hs-hat-stm32f103-simplex-14.7456-adf7021"
 QUALIFIED_FIRMWARE_IDENTITY = (
