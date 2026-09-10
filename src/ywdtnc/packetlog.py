@@ -24,21 +24,38 @@ def _route(event: dict) -> str:
     source = str(event.get("source", "?"))
     destination = str(event.get("destination", "?"))
     path = event.get("path")
-    route = f"{source}>{destination}"
+    route = f"fm {source} to {destination}"
     if isinstance(path, list) and path:
         route += " via " + " ".join(str(item) for item in path)
     return route
 
 
-def _frame_tail(event: dict) -> str:
+def _control_text(event: dict) -> str:
+    frame_class = str(event.get("frame_class", ""))
     frame_type = str(event.get("frame_type", "?"))
-    parts = [frame_type]
+    pf = "+" if event.get("poll_final") is True else "-"
+    nr = event.get("nr")
+    ns = event.get("ns")
+    if frame_class == "I" and isinstance(ns, int) and isinstance(nr, int):
+        return f"I{ns}{nr}{pf}"
+    if frame_class == "S" and isinstance(nr, int):
+        return f"{frame_type}{nr}{pf}"
+    if frame_class == "U":
+        return f"{frame_type}{pf}"
+    return frame_type
+
+
+def _frame_tail(event: dict) -> str:
+    parts = [f"ctl {_control_text(event)}"]
     pid = event.get("pid")
     if isinstance(pid, int):
         parts.append(f"pid={pid:02X}")
+    info_hex = event.get("info_hex")
+    if isinstance(info_hex, str):
+        parts.append(f"len={len(info_hex) // 2}")
     info = str(event.get("info_text", ""))
     if info:
-        parts.append(info)
+        parts.append(" " + info)
     return " ".join(parts)
 
 
@@ -51,7 +68,9 @@ def format_event(event: dict) -> str:
         stage = kind[3:].upper().replace("_", "-")
         request_id = event.get("request_id")
         request = "" if request_id is None else f" #{request_id}"
-        route = "" if "source" not in event else f" {_route(event)}"
+        frame = ""
+        if "source" in event:
+            frame = f" {_route(event)} {_frame_tail(event)}"
         extra = ""
         if kind == "tx.channel_clear" and event.get("raw_rssi") is not None:
             extra = f" raw_rssi={event['raw_rssi']}"
@@ -61,7 +80,7 @@ def format_event(event: dict) -> str:
             extra = f" reason={event['reason']}"
         elif kind == "tx.failed" and event.get("error"):
             extra = f" error={event['error']}"
-        return f"{stamp} TX {stage}{request}{route}{extra}"
+        return f"{stamp} TX {stage}{request}{frame}{extra}"
     return f"{stamp} {kind} {json.dumps(event, separators=(',', ':'), sort_keys=True)}"
 
 
