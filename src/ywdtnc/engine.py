@@ -10,7 +10,7 @@ from typing import Callable
 
 from ywd1278.kiss.control import TNCControlBackend, TNCParameterSnapshot, TNCSessionState
 from ywd1278.kiss.framing import DATA, KISSMessage
-from ywd1278.kiss.server import ThreadingKISSServer, start_server_thread, stop_server_thread
+from ywd1278.kiss.server import PacketEvent, ThreadingKISSServer, start_server_thread, stop_server_thread
 from ywd1278.kiss.sustained import SustainedTNCBackend, ThreadSafeKISSDataAdmissionQueue
 from ywd1278.modem._serial import posix_serial_transport_factory
 from ywd1278.modem.owner import TransportFactory
@@ -21,6 +21,19 @@ from ywd1278.tx.half_duplex import HalfDuplexParameters
 from . import QUALIFIED_FIRMWARE_IDENTITY
 from .agw.server import ThreadingAGWServer, start_agw_server_thread, stop_agw_server_thread
 from .config import TNCConfig, validate_config
+from .monitor import (
+    MonitorEventHub,
+    ThreadingMonitorServer,
+    frame_fields,
+    start_monitor_server_thread,
+    stop_monitor_server_thread,
+)
+from .monitor_tx import (
+    MonitoredAdmissionQueue,
+    MonitoredContextualLifecycle,
+    MonitoredContextualRouter,
+    TXRequestTracker,
+)
 from .rf_profiles import ProductTXModemOwner
 
 
@@ -43,24 +56,52 @@ class TNCEngineSnapshot:
     tx_queue_depth: int
     kiss_listener: tuple[str, int] | None
     agw_listener: tuple[str, int] | None
+    monitor_listener: tuple[str, int] | None
     failure: str
 
 
 class ModemTNCBackend(SustainedTNCBackend):
-    """Shared KISS/AGW backend with fail-closed product TX authority."""
+    """Shared KISS/AGW backend with fail-closed TX and side-band monitoring."""
 
-    def __init__(self, *args, transmit_enabled: bool, **kwargs) -> None:  # type: ignore[no-untyped-def]
+    def __init__(
+        self,
+        *args,
+        transmit_enabled: bool,
+        monitor_hub: MonitorEventHub,
+        **kwargs,
+    ) -> None:  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
         self.transmit_enabled = bool(transmit_enabled)
+        self.monitor_hub = monitor_hub
+
+    def publish(self, event: PacketEvent) -> None:
+        super().publish(event)
+        self.monitor_hub.publish("rx.frame", **frame_fields(event.frame_no_fcs))
 
     def reject_client_message(self, message: KISSMessage):  # type: ignore[no-untyped-def]
-        if message.port == 0 and message.command == DATA and not self.transmit_enabled:
-            return TNCControlBackend.reject_client_message(self, message)
+        if message.port == 0 and message.command == DATA:
+            self.monitor_hub.publish("tx.submitted", **frame_fields(message.frame))
+            if not self.transmit_enabled:
+                result = TNCControlBackend.reject_client_message(self, message)
+                self.monitor_hub.publish(
+                    "tx.rejected",
+                    **frame_fields(message.frame),
+                    reason="product TX is disabled",
+                )
+                return result
+            result = super().reject_client_message(message)
+            if getattr(result, "admitted", True) is False:
+                self.monitor_hub.publish(
+                    "tx.rejected",
+                    **frame_fields(message.frame),
+                    reason=str(getattr(result, "reason", "TX admission rejected")),
+                )
+            return result
         return super().reject_client_message(message)
 
 
 class TNCEngine:
-    """Own exactly one modem UART and expose it through KISS and/or AGW raw mode."""
+    """Own one modem UART and expose KISS, AGW raw, and passive monitor planes."""
 
     def __init__(
         self,
@@ -78,10 +119,12 @@ class TNCEngine:
         self._sleep = sleep
         self._random_byte_source = random_byte_source or (lambda: secrets.randbelow(256))
 
+        self.monitor_hub = MonitorEventHub(subscriber_queue_capacity=256)
+        self.tx_tracker = TXRequestTracker()
         self.owner: ProductTXModemOwner | None = None
         self.router: ContextualTXDelayRouter | None = None
         self.lifecycle: ContextualHalfDuplexSubmitter | None = None
-        self.admission: ThreadSafeKISSDataAdmissionQueue | None = None
+        self.admission = None
         self.session: TNCSessionState | None = None
         self.backend: ModemTNCBackend | None = None
         self.runtime: SustainedTNCRuntime | None = None
@@ -89,6 +132,8 @@ class TNCEngine:
         self.kiss_thread: threading.Thread | None = None
         self.agw_server: ThreadingAGWServer | None = None
         self.agw_thread: threading.Thread | None = None
+        self.monitor_server: ThreadingMonitorServer | None = None
+        self.monitor_thread: threading.Thread | None = None
 
         self._started = False
         self._stopped = False
@@ -101,12 +146,16 @@ class TNCEngine:
         queue_depth = self.admission.snapshot.queue_depth if self.admission is not None else 0
         kiss_listener = None
         agw_listener = None
+        monitor_listener = None
         if self.kiss_server is not None:
             host, port = self.kiss_server.server_address[:2]
             kiss_listener = (str(host), int(port))
         if self.agw_server is not None:
             host, port = self.agw_server.server_address[:2]
             agw_listener = (str(host), int(port))
+        if self.monitor_server is not None:
+            host, port = self.monitor_server.server_address[:2]
+            monitor_listener = (str(host), int(port))
         running = bool(
             self.owner
             and self.owner.snapshot.running
@@ -114,6 +163,7 @@ class TNCEngine:
             and runtime.running
             and (not self.config.kiss.enabled or (self.kiss_thread and self.kiss_thread.is_alive()))
             and (not self.config.agw.enabled or (self.agw_thread and self.agw_thread.is_alive()))
+            and (not self.config.monitor.enabled or (self.monitor_thread and self.monitor_thread.is_alive()))
         )
         return TNCEngineSnapshot(
             running=running,
@@ -124,6 +174,7 @@ class TNCEngine:
             tx_queue_depth=queue_depth,
             kiss_listener=kiss_listener,
             agw_listener=agw_listener,
+            monitor_listener=monitor_listener,
             failure="" if runtime is None else runtime.failure,
         )
 
@@ -176,9 +227,10 @@ class TNCEngine:
                 default_transaction_timeout=1.5,
             )
             self.router = router
+            monitored_router = MonitoredContextualRouter(router, self.monitor_hub, self.tx_tracker)
             lifecycle = ContextualHalfDuplexSubmitter(
                 owner,
-                router,
+                monitored_router,  # type: ignore[arg-type]
                 monotonic=self._monotonic,
                 sleep=self._sleep,
                 parameters=HalfDuplexParameters(
@@ -188,13 +240,17 @@ class TNCEngine:
                 ),
             )
             self.lifecycle = lifecycle
-            admission = ThreadSafeKISSDataAdmissionQueue(
-                lifecycle,
+            monitored_lifecycle = MonitoredContextualLifecycle(
+                lifecycle, self.monitor_hub, self.tx_tracker
+            )
+            base_admission = ThreadSafeKISSDataAdmissionQueue(
+                monitored_lifecycle,  # type: ignore[arg-type]
                 monotonic=self._monotonic,
                 queue_capacity=4,
                 request_timeout_seconds=30.0,
                 downstream_timeout_seconds=1.5,
             )
+            admission = MonitoredAdmissionQueue(base_admission, self.monitor_hub, self.tx_tracker)
             self.admission = admission
             session = TNCSessionState(
                 TNCParameterSnapshot(
@@ -205,18 +261,19 @@ class TNCEngine:
             )
             self.session = session
             backend = ModemTNCBackend(
-                admission,
+                admission,  # type: ignore[arg-type]
                 monotonic=self._monotonic,
                 session=session,
                 history_capacity=0,
                 subscriber_queue_capacity=64,
                 transmit_enabled=self.config.tx_enabled,
+                monitor_hub=self.monitor_hub,
             )
             self.backend = backend
             runtime = SustainedTNCRuntime(
                 owner,
                 backend,
-                admission,
+                admission,  # type: ignore[arg-type]
                 expected_identity=self.config.required_identity,
                 monotonic=self._monotonic,
                 random_byte_source=self._random_byte_source,
@@ -240,6 +297,12 @@ class TNCEngine:
                     host=self.config.agw.listen,
                     port=self.config.agw.port,
                 )
+            if self.config.monitor.enabled:
+                self.monitor_server, self.monitor_thread = start_monitor_server_thread(
+                    self.monitor_hub,
+                    host=self.config.monitor.listen,
+                    port=self.config.monitor.port,
+                )
             self.check_health()
         except BaseException:
             self._cleanup(suppress_errors=True)
@@ -255,6 +318,10 @@ class TNCEngine:
             raise TNCEngineError("KISS listener is not running")
         if self.config.agw.enabled and not (self.agw_thread and self.agw_thread.is_alive()):
             raise TNCEngineError("AGW listener is not running")
+        if self.config.monitor.enabled and not (
+            self.monitor_thread and self.monitor_thread.is_alive()
+        ):
+            raise TNCEngineError("monitor listener is not running")
 
     def stop(self) -> None:
         if self._stopped:
@@ -266,6 +333,14 @@ class TNCEngine:
 
     def _cleanup(self, *, suppress_errors: bool) -> list[BaseException]:
         errors: list[BaseException] = []
+        if self.monitor_server is not None and self.monitor_thread is not None:
+            try:
+                stop_monitor_server_thread(self.monitor_server, self.monitor_thread)
+            except BaseException as exc:
+                errors.append(exc)
+            finally:
+                self.monitor_server = None
+                self.monitor_thread = None
         if self.agw_server is not None and self.agw_thread is not None:
             try:
                 stop_agw_server_thread(self.agw_server, self.agw_thread)
