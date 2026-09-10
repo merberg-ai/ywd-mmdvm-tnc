@@ -1,0 +1,23 @@
+[Unit]
+Description=YWD-MMDVM-TNC passive packet activity logger
+Documentation=https://github.com/merberg-ai/ywd-mmdvm-tnc
+After=network.target ywd-mmdvm-tnc.service
+Requires=ywd-mmdvm-tnc.service
+
+[Service]
+Type=simple
+ExecStart=/opt/ywd-mmdvm-tnc/venv/bin/ywd-packetlog --config /etc/ywd-mmdvm-tnc/config.toml --log-dir /var/log/ywd-packetlog
+Restart=always
+RestartSec=3s
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+LogsDirectory=ywd-packetlog
+LogsDirectoryMode=0755
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ywd-packetlog
+
+[Install]
+WantedBy=multi-user.target
