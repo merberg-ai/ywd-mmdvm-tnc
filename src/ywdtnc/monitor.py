@@ -160,10 +160,14 @@ def frame_fields(frame_no_fcs: bytes) -> dict[str, object]:
         fields["parse_error"] = str(exc)
         return fields
     info = bytes(parsed["info"])
+    path = [
+        str(item) + ("*" if getattr(item, "flag", False) else "")
+        for item in parsed["path"]
+    ]
     fields.update({
         "source": str(parsed["source"]),
         "destination": str(parsed["destination"]),
-        "path": [str(item) for item in parsed["path"]],
+        "path": path,
         "frame_class": str(parsed["frame_class"]),
         "frame_type": str(parsed["frame_type"]),
         "control": int(parsed["control"]),
