@@ -67,12 +67,12 @@ class ModemTNCBackend(SustainedTNCBackend):
         self,
         *args,
         transmit_enabled: bool,
-        monitor_hub: MonitorEventHub,
+        monitor_hub: MonitorEventHub | None = None,
         **kwargs,
     ) -> None:  # type: ignore[no-untyped-def]
         super().__init__(*args, **kwargs)
         self.transmit_enabled = bool(transmit_enabled)
-        self.monitor_hub = monitor_hub
+        self.monitor_hub = monitor_hub if monitor_hub is not None else MonitorEventHub()
 
     def publish(self, event: PacketEvent) -> None:
         super().publish(event)
@@ -119,7 +119,7 @@ class TNCEngine:
         self._sleep = sleep
         self._random_byte_source = random_byte_source or (lambda: secrets.randbelow(256))
 
-        self.monitor_hub = MonitorEventHub(subscriber_queue_capacity=256)
+        self.monitor_hub = MonitorEventHub(queue_capacity=256)
         self.tx_tracker = TXRequestTracker()
         self.owner: ProductTXModemOwner | None = None
         self.router: ContextualTXDelayRouter | None = None
