@@ -1,0 +1,30 @@
+[Unit]
+Description=YWD-MMDVM-TNC passive packet monitor WebUI
+Documentation=https://github.com/merberg-ai/ywd-mmdvm-tnc
+After=network.target ywd-mmdvm-tnc.service
+
+[Service]
+Type=simple
+ExecStart=/opt/ywd-mmdvm-tnc/venv/bin/ywd-webui --config /etc/ywd-mmdvm-tnc/webui.toml
+Restart=always
+RestartSec=3s
+NoNewPrivileges=true
+DynamicUser=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET
+CapabilityBoundingSet=
+AmbientCapabilities=
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ywd-webui
+
+[Install]
+WantedBy=multi-user.target
