@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "qualification": "webui-physical",
+  "date": "2026-09-11",
+  "result": "PASS",
+  "branch": "dev-webui",
+  "code_under_test": "74d0f808bc96ba25684fa2e3fc9a68c07f43fa28",
+  "host_qualified_checkpoint": "checkpoint/webui-host-qualified",
+  "qualified_base": "a941f39f7393588029fb6e0ec274bd653dd07da9",
+  "station_context": {
+    "product": "YWD-MMDVM-TNC",
+    "webui": "YWD // PACKET MONITOR",
+    "monitor_source": "127.0.0.1:8002 schema-1 NDJSON",
+    "web_transport": "HTTP + SSE",
+    "historical_source": "/var/log/ywd-packetlog/YYYY-MM-DD.jsonl",
+    "physical_gate": "scripts/webui-physical.sh"
+  },
+  "operator_reported_gate_output": {
+    "WEBUI_STATUS_READ_ONLY": "PASS",
+    "WEBUI_MONITOR_STATE": "connected",
+    "WEBUI_HTTP_MUTATION_API": "ABSENT",
+    "WEBUI_SSE_CONNECTED": "PASS",
+    "WEBUI_LIVE_EVENT": "rx.frame",
+    "WEBUI_LIVE_SEQ": 2881,
+    "WEBUI_LIVE_GENERATION": 1,
+    "WEBUI_LIVE_SCHEMA1_SSE": "PASS",
+    "WEBUI_PHYSICAL_GATE": "PASS",
+    "RF_GENERATED_BY_GATE": "NO",
+    "KISS_FRAME_GENERATED_BY_GATE": "NO",
+    "QUALIFIED_MODEM_PATH_CONTROLLED_BY_WEBUI": "NO"
+  },
+  "operator_visual_verification": {
+    "result": "PASS",
+    "notes": "Operator-provided mobile-browser screenshots showed the live dashboard rendering correctly with monitor connected, SSE active, zero WebUI drops at observation time, live RX/TX counters, populated history, daily statistics, top-source/frame-type summaries, and the human-readable console. Operator reported that the WebUI looked great and appeared to be working correctly."
+  },
+  "physical_claims_supported": {
+    "real_live_monitor_event_reached_browser_sse": true,
+    "schema_1_event_observed": true,
+    "webui_monitor_connection_live": true,
+    "http_mutation_api_absent": true,
+    "gate_generated_rf": false,
+    "gate_generated_kiss_frame": false,
+    "webui_controls_qualified_modem_path": false,
+    "historical_logs_rendered": true,
+    "mobile_browser_rendering_verified": true
+  },
+  "safety_interpretation": {
+    "webui_remains_passive_observer": true,
+    "qualified_modem_tnc_rf_path_modified": false,
+    "physical_gate_observation_only": true,
+    "promotion_to_dev_requires_explicit_operator_approval": true
+  },
+  "provenance": {
+    "source": "operator-supplied physical gate output and mobile-browser screenshots",
+    "physical_result_was_not_generated_or_inferred_by_ci": true,
+    "host_qualification_evidence": "qualification/webui-host-2026-09-10.json"
+  },
+  "next_step": "Require CI green at this evidence tip, then freeze checkpoint/webui-physical-qualified."
+}
