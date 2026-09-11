@@ -1,0 +1,21 @@
+# YWD-MMDVM-TNC passive packet WebUI
+# Safe default: browser listener is loopback-only until LAN access is explicitly enabled.
+
+[web]
+listen = "127.0.0.1"
+port = 8088
+allow_wildcard_bind = false
+
+[monitor]
+# Deliberately restricted by the WebUI to an IPv4 loopback address.
+host = "127.0.0.1"
+port = 8002
+reconnect_seconds = 2.0
+
+[history]
+directory = "/var/log/ywd-packetlog"
+recent_capacity = 512
+sse_queue_capacity = 256
+max_history_limit = 1000
+max_console_lines = 2000
+max_stats_events = 100000
