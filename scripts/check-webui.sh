@@ -3,10 +3,12 @@ set -Eeuo pipefail
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+export PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 BASE="a941f39f7393588029fb6e0ec274bd653dd07da9"
 
 fail() { echo "WEBUI_HOST_GATE=FAIL: $*" >&2; exit 1; }
 
+git cat-file -e "$BASE^{commit}" 2>/dev/null || fail "qualified dev-webui base commit is unavailable"
 python3 -m py_compile src/ywdweb/*.py
 python3 -m unittest discover -s tests -p 'test_webui*.py' -v
 bash -n installer/install.sh
