@@ -2,7 +2,7 @@ name: ywd-mmdvm-tnc-ci
 
 on:
   push:
-    branches: [main, dev, "firmware/**", "runtime/**", "checkpoint/**"]
+    branches: [main, dev, dev-webui, "firmware/**", "runtime/**", "checkpoint/**"]
   pull_request:
 
 permissions:
@@ -37,6 +37,9 @@ jobs:
 
       - name: Passive monitor-events host contract
         run: bash scripts/check-monitor-events.sh
+
+      - name: Passive WebUI host contract
+        run: bash scripts/check-webui.sh
 
       - name: Firmware updater safety contract
         run: bash scripts/check-firmware-update-tooling.sh
