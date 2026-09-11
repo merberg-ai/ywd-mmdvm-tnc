@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "qualification": "passive-webui-host",
+  "date": "2026-09-10",
+  "result": "PASS",
+  "branch": "dev-webui",
+  "base_dev_commit": "a941f39f7393588029fb6e0ec274bd653dd07da9",
+  "code_under_test": "d3008b0beacc1f6160c442830a9e7f009588265d",
+  "ci": {
+    "workflow": "ywd-mmdvm-tnc-ci",
+    "run_number": 147,
+    "run_id": 34562227568,
+    "job_id": 103147154562,
+    "host_contract": "PASS"
+  },
+  "scope": {
+    "component": "separate read-only ywd-webui observer service",
+    "live_source": "127.0.0.1:8002 schema-1 NDJSON monitor",
+    "structured_history": "/var/log/ywd-packetlog/YYYY-MM-DD.jsonl",
+    "human_history": "/var/log/ywd-packetlog/YYYY-MM-DD.log",
+    "browser_transport": "HTTP GET plus Server-Sent Events",
+    "default_web_bind": "127.0.0.1:8088",
+    "monitor_source_policy": "IPv4 loopback only"
+  },
+  "host_tests": {
+    "webui_tests": 14,
+    "full_python_suite_observed_in_public_contract": 70,
+    "package_build_and_install": "PASS",
+    "http_get_api": "PASS",
+    "sse_delivery": "PASS",
+    "history_filters_and_stats": "PASS",
+    "date_path_traversal_rejected": "PASS",
+    "monitor_reader_schema1_receive": "PASS",
+    "monitor_reader_write_to_source": "ABSENT",
+    "slow_browser_backpressure": "DROP_ONLY",
+    "post_method": "NOT_IMPLEMENTED_501",
+    "javascript_syntax": "PASS",
+    "framework_self_test": "PASS"
+  },
+  "gate_markers": {
+    "WEBUI_HOST_GATE": "PASS",
+    "QUALIFIED_MODEM_MONITOR_PATH_CHANGED": "NO",
+    "HTTP_MUTATION_API_PRESENT": "NO",
+    "MONITOR_SOCKET_WRITE_API_PRESENT": "NO",
+    "KISS_OR_MODEM_IMPORT_PRESENT": "NO",
+    "MODEM_UART_OPENED": "NO",
+    "RF_TRANSMITTED": "NO"
+  },
+  "runtime_equivalence": {
+    "qualified_ywd1278_runtime_files": 33,
+    "runtime_blobs_exact": "PASS",
+    "hat_support_blobs_exact": "PASS",
+    "forbidden_product_layers_absent": "PASS",
+    "passive_webui_package_allowed_outside_frozen_runtime": "PASS"
+  },
+  "service_safety": {
+    "separate_systemd_service": true,
+    "auto_enabled_by_low_level_installer": false,
+    "dynamic_user": true,
+    "private_devices": true,
+    "protect_system_strict": true,
+    "capabilities_dropped": true,
+    "remote_static_dependencies": false
+  },
+  "physical_status": {
+    "performed": false,
+    "required_next": true,
+    "gate": "scripts/webui-physical.sh",
+    "gate_generates_kiss_or_rf": false,
+    "visual_browser_validation_required": true
+  },
+  "interpretation": {
+    "host_qualified": true,
+    "physical_qualified": false,
+    "qualified_modem_or_rf_path_modified": false,
+    "ready_for_real_pi_webui_test": true
+  },
+  "provenance": {
+    "source": "GitHub Actions run 147 and committed host tests/contracts",
+    "physical_result_was_not_inferred": true
+  }
+}
