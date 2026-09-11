@@ -30,12 +30,27 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(config.agw.listen, "127.0.0.1")
         self.assertFalse(config.agw.allow_wildcard_bind)
         self.assertTrue(config.agw_raw_only)
+        self.assertTrue(config.monitor.enabled)
+        self.assertEqual(config.monitor.listen, "127.0.0.1")
+        self.assertEqual(config.monitor.port, 8002)
+        self.assertFalse(config.monitor.allow_wildcard_bind)
+
+    def test_pre_monitor_config_remains_valid_and_monitor_disabled(self) -> None:
+        text = EXAMPLE.read_text()
+        start = text.index("# Passive newline-delimited JSON event stream")
+        end = text.index("[firmware]")
+        legacy = text[:start] + text[end:]
+        config = self._load_text(legacy)
+        self.assertFalse(config.monitor.enabled)
+        self.assertEqual(config.monitor.listen, "127.0.0.1")
+        self.assertEqual(config.monitor.port, 8002)
 
     def test_private_lan_bind_is_explicitly_allowed(self) -> None:
         text = EXAMPLE.read_text().replace('listen = "127.0.0.1"', 'listen = "192.168.1.50"')
         config = self._load_text(text)
         self.assertEqual(config.kiss.listen, "192.168.1.50")
         self.assertEqual(config.agw.listen, "192.168.1.50")
+        self.assertEqual(config.monitor.listen, "192.168.1.50")
 
     def test_wildcard_bind_is_rejected_without_opt_in(self) -> None:
         text = EXAMPLE.read_text().replace(
@@ -55,6 +70,14 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(config.kiss.allow_wildcard_bind)
         self.assertEqual(config.agw.listen, "127.0.0.1")
         self.assertFalse(config.tx_enabled)
+
+    def test_monitor_wildcard_bind_requires_explicit_opt_in(self) -> None:
+        text = EXAMPLE.read_text().replace(
+            'listen = "127.0.0.1"\nport = 8002\nallow_wildcard_bind = false',
+            'listen = "0.0.0.0"\nport = 8002\nallow_wildcard_bind = false',
+        )
+        with self.assertRaises(TNCConfigurationError):
+            self._load_text(text)
 
     def test_public_bind_is_rejected_even_with_wildcard_opt_in(self) -> None:
         text = EXAMPLE.read_text().replace(

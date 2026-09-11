@@ -29,6 +29,13 @@ port = 8000
 allow_wildcard_bind = false
 raw_only = true
 
+# Passive newline-delimited JSON event stream. This path has no transmit API.
+[monitor]
+enabled = true
+listen = "127.0.0.1"
+port = 8002
+allow_wildcard_bind = false
+
 [firmware]
 # This exact runtime identity belongs to the immutable, physically-qualified image.
 required_identity = "MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"

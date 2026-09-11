@@ -13,9 +13,14 @@ ui_init "$@"
 
 CONFIG=/etc/ywd-mmdvm-tnc/config.toml
 SERVICE=ywd-mmdvm-tnc.service
+PACKETLOG_SERVICE=ywd-packetlog.service
 EXPECTED_IDENTITY="MMDVM_HS_Hat-YWD-1278-AX25R4-v0.1.0-alpha1 14.7456MHz ADF7021 FW based on CA6JAU GitID #7ff74ed"
 HAD_CONFIG=0
 [[ -e "$CONFIG" ]] && HAD_CONFIG=1
+PACKETLOG_WAS_ENABLED=0
+PACKETLOG_WAS_ACTIVE=0
+systemctl is-enabled --quiet "$PACKETLOG_SERVICE" 2>/dev/null && PACKETLOG_WAS_ENABLED=1 || true
+systemctl is-active --quiet "$PACKETLOG_SERVICE" 2>/dev/null && PACKETLOG_WAS_ACTIVE=1 || true
 
 on_error() {
   local rc=$?
@@ -113,6 +118,14 @@ port = 8000
 allow_wildcard_bind = false
 raw_only = true
 
+# Passive, live-only newline-delimited JSON event stream. This interface has no
+# command or transmit API and is intentionally bound to loopback by default.
+[monitor]
+enabled = true
+listen = "127.0.0.1"
+port = 8002
+allow_wildcard_bind = false
+
 [firmware]
 # Immutable identity of the physically-qualified firmware image.
 required_identity = "$EXPECTED_IDENTITY"
@@ -123,6 +136,51 @@ EOF_CONFIG
   ui_ok "Configuration saved"
 else
   ui_ok "Existing configuration retained"
+fi
+
+monitor_state="$(/opt/ywd-mmdvm-tnc/venv/bin/python - "$CONFIG" <<'PY'
+import sys, tomllib
+with open(sys.argv[1], 'rb') as f:
+    c = tomllib.load(f)
+m = c.get('monitor')
+if not isinstance(m, dict):
+    print('missing')
+elif m.get('enabled') is True:
+    print('enabled')
+else:
+    print('disabled')
+PY
+)"
+
+if [[ "$monitor_state" == missing ]]; then
+  ui_header "Passive monitor stream"
+  monitor_default=no
+  if (( PACKETLOG_WAS_ENABLED || PACKETLOG_WAS_ACTIVE )); then
+    monitor_default=yes
+    ui_warn "An existing ywd-packetlog service was detected; enabling the product monitor stream allows it to migrate from KISS sniffing to first-class TNC events."
+  fi
+  ui_prompt_yes_no monitor_upgrade "Add the local passive monitor stream on 127.0.0.1:8002 without changing your existing radio/KISS settings?" "$monitor_default"
+  if [[ "$monitor_upgrade" == yes ]]; then
+    backup="$CONFIG.$(date +%Y%m%d-%H%M%S).before-monitor.bak"
+    cp -a "$CONFIG" "$backup"
+    cat >>"$CONFIG" <<'EOF_MONITOR'
+
+# Passive, live-only newline-delimited JSON event stream. This interface has no
+# command or transmit API and is intentionally bound to loopback by default.
+[monitor]
+enabled = true
+listen = "127.0.0.1"
+port = 8002
+allow_wildcard_bind = false
+EOF_MONITOR
+    chmod 0640 "$CONFIG"
+    ui_run "Validating monitor-upgraded configuration" /opt/ywd-mmdvm-tnc/venv/bin/ywd-tncd --config "$CONFIG" --framework-self-test
+    ui_ok "Passive monitor stream added; existing TNC settings preserved"
+    ui_log "MONITOR_CONFIG_BACKUP=$backup"
+    monitor_state=enabled
+  else
+    ui_ok "Existing configuration left unchanged; passive monitor remains disabled"
+  fi
 fi
 
 ui_header "HAT firmware"
@@ -155,6 +213,7 @@ else
   fi
 fi
 
+packetlog_state=disabled
 if [[ "$firmware_ready" != yes ]]; then
   ui_warn "The service will not be started until the qualified firmware is installed."
 else
@@ -168,19 +227,59 @@ else
     exit 30
   }
   ui_ok "YWD-MMDVM-TNC is running"
+
+  if [[ "$monitor_state" == enabled ]]; then
+    if (( PACKETLOG_WAS_ENABLED || PACKETLOG_WAS_ACTIVE )); then
+      ui_header "Packet activity logger"
+      if (( PACKETLOG_WAS_ENABLED )); then
+        ui_run "Keeping ywd-packetlog enabled at boot" systemctl enable "$PACKETLOG_SERVICE"
+      fi
+      ui_run "Migrating/restarting ywd-packetlog on the product monitor stream" systemctl restart "$PACKETLOG_SERVICE"
+      sleep 0.25
+      systemctl is-active --quiet "$PACKETLOG_SERVICE" || {
+        journalctl -u "$PACKETLOG_SERVICE" -n 40 --no-pager >>"$YWD_TNC_LOG_FILE" 2>&1 || true
+        ui_fail "Packet logger did not remain active."
+        exit 31
+      }
+      ui_ok "Existing packet logger migrated to the first-class monitor stream"
+      packetlog_state=enabled
+    else
+      ui_prompt_yes_no packetlog_answer "Enable the passive packet activity logger at boot?" no
+      if [[ "$packetlog_answer" == yes ]]; then
+        ui_run "Enabling and starting ywd-packetlog" systemctl enable --now "$PACKETLOG_SERVICE"
+        sleep 0.25
+        systemctl is-active --quiet "$PACKETLOG_SERVICE" || {
+          journalctl -u "$PACKETLOG_SERVICE" -n 40 --no-pager >>"$YWD_TNC_LOG_FILE" 2>&1 || true
+          ui_fail "Packet logger did not remain active."
+          exit 31
+        }
+        ui_ok "Passive packet activity logging enabled"
+        packetlog_state=enabled
+      else
+        ui_ok "Packet logger installed but left disabled"
+      fi
+    fi
+  elif (( PACKETLOG_WAS_ENABLED || PACKETLOG_WAS_ACTIVE )); then
+    ui_warn "ywd-packetlog was previously configured, but the product monitor stream is disabled. Enable [monitor] before restarting the installed packet logger."
+  fi
 fi
 
 trap - ERR
 ui_header "Setup complete"
 
-summary="$(/opt/ywd-mmdvm-tnc/venv/bin/python - "$CONFIG" <<'PY'
+summary="$(/opt/ywd-mmdvm-tnc/venv/bin/python - "$CONFIG" "$packetlog_state" <<'PY'
 import sys,tomllib
 with open(sys.argv[1], 'rb') as f: c=tomllib.load(f)
-r=c['radio']; k=c['kiss']; a=c['agw']
+r=c['radio']; k=c['kiss']; a=c['agw']; m=c.get('monitor', {})
 print(f"frequency={r['frequency_mhz']}")
 print(f"tx={'enabled' if r['tx_enabled'] else 'disabled'}")
 print(f"kiss={k['listen']}:{k['port']}")
 print(f"agw={'enabled' if a['enabled'] else 'disabled'}")
+if isinstance(m, dict) and m.get('enabled') is True:
+    print(f"monitor={m.get('listen', '127.0.0.1')}:{m.get('port', 8002)}")
+else:
+    print('monitor=disabled')
+print(f"packetlog={sys.argv[2]}")
 PY
 )"
 printf '%s\n' "$summary"
@@ -191,7 +290,12 @@ fi
 printf 'service=%s\n' "$SERVICE"
 printf 'config=%s\n' "$CONFIG"
 printf 'install_log=%s\n' "$YWD_TNC_LOG_FILE"
+if [[ "$packetlog_state" == enabled ]]; then
+  printf 'packet_logs=/var/log/ywd-packetlog/YYYY-MM-DD.{log,jsonl}\n'
+fi
 printf '\nUseful commands:\n'
 printf '  sudo systemctl status %s\n' "$SERVICE"
 printf '  sudo journalctl -u %s -f\n' "$SERVICE"
+printf '  sudo systemctl status %s\n' "$PACKETLOG_SERVICE"
+printf '  sudo journalctl -u %s -f\n' "$PACKETLOG_SERVICE"
 printf '  sudo /opt/ywd-mmdvm-tnc/source/firmware/probe.sh\n'

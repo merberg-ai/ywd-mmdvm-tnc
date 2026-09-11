@@ -34,6 +34,12 @@ def run_daemon(config_path: str | Path, *, stop_event: threading.Event) -> int:
             else f"AGW_RAW_LISTENER={snap.agw_listener[0]}:{snap.agw_listener[1]}",
             flush=True,
         )
+        print(
+            "MONITOR_LISTENER=DISABLED"
+            if snap.monitor_listener is None
+            else f"MONITOR_LISTENER={snap.monitor_listener[0]}:{snap.monitor_listener[1]}",
+            flush=True,
+        )
         while not stop_event.wait(0.25):
             engine.check_health()
     finally:

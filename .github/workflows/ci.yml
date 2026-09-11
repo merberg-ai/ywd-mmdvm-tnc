@@ -35,6 +35,9 @@ jobs:
       - name: Public release host contract
         run: bash scripts/check-public-polish.sh
 
+      - name: Passive monitor-events host contract
+        run: bash scripts/check-monitor-events.sh
+
       - name: Firmware updater safety contract
         run: bash scripts/check-firmware-update-tooling.sh
 
