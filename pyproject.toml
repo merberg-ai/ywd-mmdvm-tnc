@@ -19,10 +19,14 @@ ywd-tnc-rx-gate = "ywdtnc.rx_gate:main"
 ywd-tnc-p2-gate = "ywdtnc.p2_qualification:main"
 ywd-tnc-profile = "ywdtnc.profile_cli:main"
 ywd-packetlog = "ywdtnc.packetlog:main"
+ywd-webui = "ywdweb.app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["ywdtnc*", "ywd1278*"]
+include = ["ywdtnc*", "ywd1278*", "ywdweb*"]
+
+[tool.setuptools.package-data]
+ywdweb = ["static/*.html", "static/*.css", "static/*.js"]
