@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "qualification": "monitor-events-physical",
+  "date": "2026-09-10",
+  "result": "PASS",
+  "branch": "runtime/monitor-events",
+  "code_under_test": "2047ef9c3b507a2ef285dc37fd67e31304b5299f",
+  "host_qualified_checkpoint": "checkpoint/runtime-monitor-events-host-qualified",
+  "package_version": "0.1.0a16",
+  "station_context": {
+    "application": "XRouter",
+    "tnc": "YWD-MMDVM-TNC",
+    "rf_frequency_mhz": 145.05,
+    "transport": "TCP KISS for XRouter plus loopback TCP NDJSON monitor on 127.0.0.1:8002",
+    "physical_gate": "scripts/monitor-events-physical.sh"
+  },
+  "operator_reported_gate_output": {
+    "NEW_SCHEMA1_EVENTS": 48,
+    "REAL_RX_EVENTS": 13,
+    "QUALIFIED_TX_REQUEST_ID": 1,
+    "QUALIFIED_TX_EVENT_ORDER": [
+      "tx.submitted",
+      "tx.queued",
+      "tx.channel_clear",
+      "tx.dispatched",
+      "tx.complete"
+    ],
+    "QUALIFIED_TX_CHANNEL_CLEAR_RSSI": 110,
+    "QUALIFIED_TX_SELECTOR_COUNT": 521,
+    "MONITOR_EVENTS_PHYSICAL_GATE": "PASS",
+    "LOGGER_JSONL_VALID": "PASS",
+    "TX_AUTOMATIC_RETRY_ADDED": "NO"
+  },
+  "physical_claims_supported": {
+    "real_rf_rx_observed": true,
+    "successful_tx_lifecycle_observed_in_order": true,
+    "channel_clear_rssi_observed": true,
+    "positive_selector_count_observed": true,
+    "monitor_jsonl_persisted_and_valid": true,
+    "automatic_tx_retry_added": false,
+    "xrouter_kiss_operation_remained_functional_during_gate": true
+  },
+  "additional_live_network_evidence": {
+    "note": "The operator-provided recent human-readable log showed concurrent real packet-network activity beyond the minimum qualified request, including connected-mode control/data exchange and periodic beacon traffic.",
+    "representative_lines": [
+      "2026-09-10 20:14:26.699 RX fm RDG to NOCALL-15 via YWDNOD* ctl UA+ len=0",
+      "2026-09-10 20:14:27.337 TX SUBMITTED fm KJ6YWD-11 to BEACON via YWDNOD KRDG KBANN WOODY KJOHN KROCK ctl UI- pid=F0 len=96  YWDXR KJ6YWD-11 - Raspberry Pi + MMDVM_HS HAT - 145.050 <MAP:40.5767,-122.3703,KJ6YWD-11,YWDXR>\\r",
+      "2026-09-10 20:14:28.604 TX CHANNEL-CLEAR #4 fm KJ6YWD-11 to BEACON via YWDNOD KRDG KBANN WOODY KJOHN KROCK ctl UI- pid=F0 len=96  YWDXR KJ6YWD-11 - Raspberry Pi + MMDVM_HS HAT - 145.050 <MAP:40.5767,-122.3703,KJ6YWD-11,YWDXR>\\r raw_rssi=101",
+      "2026-09-10 20:14:28.631 TX DISPATCHED #4 fm KJ6YWD-11 to BEACON via YWDNOD KRDG KBANN WOODY KJOHN KROCK ctl UI- pid=F0 len=96  YWDXR KJ6YWD-11 - Raspberry Pi + MMDVM_HS HAT - 145.050 <MAP:40.5767,-122.3703,KJ6YWD-11,YWDXR>\\r selectors=1635",
+      "2026-09-10 20:14:30.033 TX COMPLETE #4 fm KJ6YWD-11 to BEACON via YWDNOD KRDG KBANN WOODY KJOHN KROCK ctl UI- pid=F0 len=96  YWDXR KJ6YWD-11 - Raspberry Pi + MMDVM_HS HAT - 145.050 <MAP:40.5767,-122.3703,KJ6YWD-11,YWDXR>\\r",
+      "2026-09-10 20:14:31.475 RX fm KJ6YWD-11 to BEACON via YWDNOD* KRDG KBANN WOODY KJOHN KROCK ctl UI- pid=F0 len=96  YWDXR KJ6YWD-11 - Raspberry Pi + MMDVM_HS HAT - 145.050 <MAP:40.5767,-122.3703,KJ6YWD-11,YWDXR>\\r",
+      "2026-09-10 20:14:34.146 TX SUBMITTED fm NOCALL-15 to RDG via YWDNOD ctl I01- pid=F0 len=4  bye\\r",
+      "2026-09-10 20:14:36.563 TX DISPATCHED #6 fm NOCALL-15 to RDG via YWDNOD ctl I01- pid=F0 len=4  bye\\r selectors=618",
+      "2026-09-10 20:14:37.115 TX COMPLETE #6 fm NOCALL-15 to RDG via YWDNOD ctl I01- pid=F0 len=4  bye\\r",
+      "2026-09-10 20:14:39.976 RX fm RDG to NOCALL-15 via YWDNOD* ctl DISC+ len=0",
+      "2026-09-10 20:14:40.016 TX SUBMITTED fm NOCALL-15 to RDG via YWDNOD ctl UA+ len=0",
+      "2026-09-10 20:14:41.876 TX COMPLETE #7 fm NOCALL-15 to RDG via YWDNOD ctl UA+ len=0"
+    ]
+  },
+  "qualification_interpretation": {
+    "minimum_gate_met": true,
+    "monitor_plane_physically_qualified": true,
+    "packet_logger_physically_qualified": true,
+    "tx_lifecycle_monitoring_physically_qualified": true,
+    "xrouter_interoperability_during_monitoring": "PASS",
+    "frozen_runtime_or_firmware_modified_by_this_evidence_commit": false
+  },
+  "provenance": {
+    "source": "operator-supplied physical gate output and recent human-readable packet log",
+    "physical_result_was_not_generated_or_inferred_by_ci": true,
+    "host_qualification_evidence": "qualification/monitor-events-host-2026-09-10.json"
+  },
+  "next_step": "Freeze a physical-qualified checkpoint at this evidence tip after CI succeeds; do not move main or dev without explicit operator approval."
+}
