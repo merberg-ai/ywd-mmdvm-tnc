@@ -95,12 +95,19 @@ class JobManager:
                 self._event(job, "Qualified profile loaded; live HAT identity remains unprobed.")
                 job.step = 2
                 access = report.get("backup_access")
-                count = report.get("backup_count")
-                golden = sum(1 for entry in report.get("backups", [])
-                             if entry.get("kind") == "golden_stock"
-                             and entry.get("integrity") == "verified"
-                             and entry.get("restore_qualified") is True)
-                self._event(job, f"Backup catalog checked: {count} records, {golden} verified golden stock.")
+                # When the root-owned catalog is inaccessible, zero visible
+                # entries is NOT evidence that zero backups exist.
+                restricted = access == "restricted"
+                count = None if restricted else report.get("backup_count")
+                golden = (None if restricted else sum(
+                    1 for entry in report.get("backups", [])
+                    if entry.get("kind") == "golden_stock"
+                    and entry.get("integrity") == "verified"
+                    and entry.get("restore_qualified") is True))
+                if restricted:
+                    self._event(job, "Backup catalog restricted; backup counts are unknown.")
+                else:
+                    self._event(job, f"Backup catalog checked: {count} records, {golden} verified golden stock.")
                 job.step = 3
                 job.status = "limited" if access == "restricted" else "complete"
                 job.result = {
