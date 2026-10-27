@@ -14,11 +14,11 @@
     <div class="brand"><span class="symbol">Y</span><div><strong>YWD<span class="light"> // </span>FWS</strong><small>FIRMWARE STUDIO</small></div></div>
     <div class="nav-label">WORKSPACE</div>
     <nav aria-label="Studio navigation"><span class="nav active">◈ &nbsp; Overview</span><span class="nav">▣ &nbsp; Firmware inventory <em>FM1</em></span><span class="nav">⇧ &nbsp; Flash &amp; restore <em>FM2</em></span><span class="nav">⌘ &nbsp; Stock builder <em>FM3</em></span></nav>
-    <div class="side-bottom"><div class="dot"></div><span>ON-DEMAND SESSION</span><small>FM1.5 · READ-ONLY</small></div>
+    <div class="side-bottom"><div class="dot"></div><span>ON-DEMAND SESSION</span><small>FM1.5c · GUARDED</small></div>
   </aside>
   <main>
-    <header><div><small class="eyebrow">HARDWARE INVENTORY / DEVELOPMENT PREVIEW</small><h1>Firmware Studio <span class="version">FM1.5</span></h1><p class="lead">An isolated workspace for MMDVM_HS HAT maintenance.</p></div><button id="logout" class="ghost" hidden>Sign out</button></header>
-    <section class="banner"><span class="green-dot"></span><div><strong>Hardware operations are locked</strong><p>FM1.5 adds an authenticated read-only preflight and event console. It does not start a hardware backup, control GPIO/UART, or write firmware. Actual backups still require a separate terminal maintenance operation.</p></div><span class="safe-tag">NO HARDWARE ACCESS</span></section>
+    <header><div><small class="eyebrow">HARDWARE INVENTORY / DEVELOPMENT PREVIEW</small><h1>Firmware Studio <span class="version">FM1.5c</span></h1><p class="lead">An isolated workspace for MMDVM_HS HAT maintenance.</p></div><button id="logout" class="ghost" hidden>Sign out</button></header>
+    <section class="banner"><span class="green-dot"></span><div><strong>Hardware operations are locked</strong><p>FM1.5c supports an individually approved two-pass firmware backup when HTTPS and the on-demand root worker are explicitly enabled. Flash and restore remain disabled; nothing starts automatically.</p></div><span class="safe-tag">NO HARDWARE ACCESS</span></section>
     <section class="inventory-pane" aria-label="Firmware inventory">
       <div class="section-title inventory-header"><h2>Firmware Inventory</h2><button class="ghost" id="refresh-inventory" type="button" disabled>⟳ Refresh</button></div>
       <p class="source-note" id="inventory-source">Sign in to load the qualified target profile and backup catalog.</p>
@@ -33,7 +33,7 @@
     <div class="section-title"><h2>Operations</h2><span>Firmware writes planned for later phases</span></div>
     <section class="grid">
       <article class="tile"><div class="tile-icon">▣</div><h3>Inventory</h3><p>Verified target profile and stored firmware backup catalog are shown above. No UART probing.</p><span class="phase">AVAILABLE · FM1</span></article>
-      <article class="tile"><div class="tile-icon">▤</div><h3>Backup Firmware</h3><p>Dual-read main-flash capture through an explicit root-only terminal worker. Never triggered by the browser.</p><span class="phase">CLI ONLY · FM1</span></article>
+      <article class="tile"><div class="tile-icon">▤</div><h3>Backup Firmware</h3><p>Two-pass 128 KiB capture, exact stock/YWD identity and service recovery, with operator authorization.</p><span class="phase">GUARDED · FM1.5c</span></article>
       <article class="tile"><div class="tile-icon">⇧</div><h3>Flash Qualified YWD</h3><p>Preflight, operator approval, STM32 programming and independent readback.</p><span class="phase">PLANNED · FM2</span></article>
       <article class="tile"><div class="tile-icon">↺</div><h3>Restore Backup</h3><p>Restore a compatible backup and safely handle an unbootable application.</p><span class="phase">PLANNED · FM2</span></article>
       <article class="tile"><div class="tile-icon">⌘</div><h3>Build Stock Firmware</h3><p>Build a pinned MMDVM_HS revision using the qualified board profile.</p><span class="phase">PLANNED · FM3</span></article>
@@ -43,7 +43,27 @@
       <div class="preflight-top"><div><small class="eyebrow">FM1.5 / NO HARDWARE ACCESS</small><h2>Backup readiness preflight</h2><p>Check the qualified target profile and stored backup records before planning a maintenance window. No HAT reset or new backup takes place.</p></div><button type="button" class="primary preflight-button" id="start-preflight" disabled>Run read-only preflight</button></div>
       <div class="job-progress" id="job-progress" hidden><div class="progress-meta"><strong id="job-state">Not started</strong><span id="job-count">0 / 3 checks</span></div><progress id="preflight-meter" max="3" value="0"></progress><div class="job-summary" id="job-summary" aria-live="polite">Waiting for preflight results</div></div>
     </section>
-    <section class="console"><div class="console-head"><div><span class="live-dot"></span> SESSION CONSOLE</div><span id="session-state">LOCKED</span></div><div id="log" class="log" role="status" aria-live="polite"><div><span class="ts">FWS</span> Firmware Studio FM1.5 interface loaded</div><div><span class="ts">INFO</span> Web server has no UART, GPIO or firmware-write capabilities</div></div><div class="console-foot">Preflight events represent real, read-only catalog checks. The console never executes firmware or shell commands.</div></section>
+    <section class="preflight-pane" aria-label="Operator-authorized hardware backup">
+      <div class="preflight-top"><div>
+        <small class="eyebrow">FM1.5c / EXPLICIT MAINTENANCE ONLY</small>
+        <h2>Backup installed HAT firmware</h2>
+        <p>A real backup temporarily pauses the modem, enters the STM32 ROM bootloader, reads all 128 KiB twice, verifies the result and restores previously running services. This will interrupt packet traffic.</p>
+        <p class="source-note" id="backup-worker-state">Checking for an armed root maintenance worker…</p>
+      </div><button type="button" class="ghost" id="refresh-worker" disabled>Check worker</button></div>
+      <form id="hardware-backup-form" class="backup-auth-form" hidden>
+        <label for="backup-approval">One-time approval code from the root worker terminal</label>
+        <input id="backup-approval" type="password" autocomplete="off" required maxlength="128" placeholder="Paste the one-time operator code">
+        <label for="backup-phrase">Type READ-HAT-MAIN-FLASH to authorize a HAT reset and read</label>
+        <input id="backup-phrase" autocomplete="off" required spellcheck="false" placeholder="READ-HAT-MAIN-FLASH">
+        <button type="submit" class="primary preflight-button" id="backup-start">Start verified hardware backup</button>
+      </form>
+      <div id="backup-operation" class="job-progress" hidden>
+        <div class="progress-meta"><strong id="backup-job-state">Not started</strong><span id="backup-job-count">0 / 8 stages</span></div>
+        <progress id="backup-meter" max="8" value="0"></progress>
+        <div class="job-summary" id="backup-job-summary" aria-live="polite">No hardware operation has started.</div>
+      </div>
+    </section>
+    <section class="console"><div class="console-head"><div><span class="live-dot"></span> SESSION CONSOLE</div><span id="session-state">LOCKED</span></div><div id="log" class="log" role="status" aria-live="polite"><div><span class="ts">FWS</span> Firmware Studio FM1.5c interface loaded</div><div><span class="ts">INFO</span> Web UI cannot flash firmware. Root backup requires one-time approval.</div></div><div class="console-foot">Preflight is read-only. Hardware backup events originate from the independent root worker after explicit authorization.</div></section>
     <footer>YWD-MMDVM-TNC · Independent maintenance application · Default listener: 127.0.0.1:8090</footer>
   </main>
 </div>
