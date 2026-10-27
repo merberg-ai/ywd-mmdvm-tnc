@@ -17,6 +17,7 @@ import time
 from .config import StudioConfig, StudioConfigError, load, validate
 from .security import PasswordVerifier, SecurityError, initialize_interactive
 from .inventory import inventory
+from .broker import fetch as fetch_inventory_broker
 
 
 @dataclass
@@ -172,7 +173,12 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                 self._json(401, {"error": "authentication required"})
             else:
                 try:
-                    self._json(200, inventory())
+                    try:
+                        report = fetch_inventory_broker()
+                    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                        report = inventory()
+                        report["catalog_access"] = "unprivileged-local"
+                    self._json(200, report)
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "inventory unavailable; check installed manifests"})
         elif self.path == "/api/status":
