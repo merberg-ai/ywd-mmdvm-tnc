@@ -227,6 +227,25 @@ The job API is restricted to:
   its progress. Events are bounded in memory and discarded on server exit.
 - Jobs cannot overlap. Progress counts metadata stages, **not bytes flashed**.
 
+### What HTTPS unlocks (and what it does not)
+
+HTTPS encrypts the browser session. It does **not** elevate privileges or
+activate firmware buttons. The current FM1.5 browser remains read-only even
+when HTTPS is working. The operator confirmed successful PiVPN mobile HTTPS
+access and the three-step preflight on 2026-10-27. A trusted certificate
+chain has **not** yet been independently verified on the phone.
+
+The original golden-stock image remains stored and previously verified.
+When the root-owned backup broker is stopped, its catalog is inaccessible
+to the web user, so the count is **unknown**, never a trustworthy zero.
+Start the separate read-only inventory broker and refresh to confirm the
+verified golden-stock record through the HTTPS interface.
+
+Enabling an actual backup button requires another independent phase:
+hardened privileged action transport, deliberate per-operation approval,
+exclusive modem UART ownership, rollback/recovery and Pi physical
+acceptance. None of those capabilities is implicitly granted by HTTPS.
+
 There is still no browser-triggered **physical** backup, flash, restore,
 root-side command, or privileged maintenance action. Those remain pending
 separate transport, service, worker authorization and Pi acceptance.
