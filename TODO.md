@@ -42,8 +42,15 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
   original MMDVM_HS_Hat-v1.6.1 backup (20260909-212957) as GOLDEN STOCK /
   VERIFIED. Running firmware remains not probed. No live backup, HAT reset,
   service stop, UART access, or firmware write was requested/performed.
-- [ ] FM1.5 Protected browser-triggered backup job and real progress console
-  only after secure transport and privileged action isolation are qualified.
+- [x] FM1.5a Add optional TLS listener with Secure sessions, session/CSRF
+  guarded read-only backup preflight, bounded job events, mobile progress
+  view and host regression tests. This does not perform hardware backups.
+- [ ] FM1.5b Qualify HTTPS credentials and access from PiVPN phone, review
+  real read-only preflight results against protected broker catalog.
+- [ ] FM1.5c Design, independently audit and physically qualify a narrowly
+  privileged, browser-authorized **real** dual-read backup job; require
+  transport trust, per-operation consent, exclusive UART/service ownership,
+  service recovery and durable audit log. HTTP LAN mode must never trigger it.
 - [ ] FM2 Verified recovery of backups and qualified firmware write.
 - [ ] FM3 Pinned official stock firmware build and guarded flash.
 - [ ] FM4 Progress, logs, service shutdown and production-quality polish.
