@@ -25,6 +25,22 @@ WEBUI_SERVICE=/etc/systemd/system/ywd-webui.service
 
 ui_header "Installing YWD-MMDVM-TNC"
 
+# A running WebUI uses code and a virtual environment under PREFIX. Remember
+# its runtime state so an upgrade does not silently leave the old process alive.
+# Incomplete upgrades attempt a best-effort restart and keep the original error.
+WEBUI_WAS_ACTIVE=no
+WEBUI_RESTART_PENDING=no
+restore_webui_on_exit() {
+  if [[ "$WEBUI_RESTART_PENDING" == yes ]]; then
+    if systemctl start ywd-webui.service >>"$YWD_TNC_LOG_FILE" 2>&1; then
+      ui_warn "WebUI restarted after incomplete install; check its journal and installation log."
+    else
+      ui_warn "WebUI could not be restarted after incomplete install; check its journal."
+    fi
+  fi
+}
+trap restore_webui_on_exit EXIT
+
 if [[ -d "$ROOT/.git" || -f "$ROOT/.git" ]]; then
   ui_run "Synchronizing qualified modem core" git -c safe.directory='*' -C "$ROOT" submodule update --init --recursive
 fi
@@ -48,6 +64,12 @@ ui_ok "Qualified source and Python runtime verified"
 
 ui_run "Checking product configuration contract" env PYTHONPATH="$ROOT/src" python3 -m ywdtnc.tncd --config "$ROOT/config/ywd-mmdvm-tnc.example.toml" --framework-self-test
 ui_run "Checking passive WebUI configuration contract" env PYTHONPATH="$ROOT/src" python3 -m ywdweb.app --config "$ROOT/config/ywd-webui.example.toml" --framework-self-test
+
+if systemctl is-active --quiet ywd-webui.service 2>/dev/null; then
+  WEBUI_WAS_ACTIVE=yes
+  WEBUI_RESTART_PENDING=yes
+  ui_run "Stopping active WebUI for package replacement" systemctl stop ywd-webui.service
+fi
 
 install -d -m 0755 "$PREFIX" "$CONFIG_DIR"
 install -d -m 0750 "$STATE_DIR"
@@ -91,6 +113,16 @@ ln -sfn "$VENV/bin/ywd-webui" /usr/local/bin/ywd-webui
 
 ui_run "Validating installed service configuration" "$VENV/bin/ywd-tncd" --config "$CONFIG" --framework-self-test
 ui_run "Validating installed passive WebUI" "$VENV/bin/ywd-webui" --config "$WEBUI_CONFIG" --framework-self-test
+if [[ "$WEBUI_WAS_ACTIVE" == yes ]]; then
+  ui_run "Restarting previously active WebUI" systemctl restart ywd-webui.service
+  systemctl is-active --quiet ywd-webui.service || {
+    ui_fail "Previously active WebUI did not remain running after upgrade."
+    exit 32
+  }
+  WEBUI_RESTART_PENDING=no
+  ui_ok "WebUI active state restored; boot enablement unchanged"
+fi
+trap - EXIT
 ui_ok "YWD-MMDVM-TNC installed"
 ui_log "QUALIFIED_CORE_COMMIT=$QUALIFIED_CORE CONFIG=$CONFIG SERVICE=$SERVICE PACKETLOG_SERVICE=$PACKETLOG_SERVICE WEBUI_CONFIG=$WEBUI_CONFIG WEBUI_SERVICE=$WEBUI_SERVICE"
 printf 'Log: %s\n' "$YWD_TNC_LOG_FILE"
