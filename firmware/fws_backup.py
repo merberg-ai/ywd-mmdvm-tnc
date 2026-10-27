@@ -129,7 +129,7 @@ def main() -> int:
         print("FWS_BACKUP=PASS")
         print("FWS_FLASH_WRITTEN=NO")
         print("FWS_OPTION_BYTES_WRITTEN=NO")
-        print("FWS_RF_TRANSMITTED=NO")
+        print("FWS_RF_COMMAND_SENT_BY_WORKER=NO")
         return 0
     except (qf.FlashError, qf.FirmwareProfileError, OSError, ValueError) as exc:
         print(f"FWS_BACKUP_ERROR={exc}", file=sys.stderr)
