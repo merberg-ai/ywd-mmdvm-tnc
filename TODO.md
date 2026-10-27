@@ -30,8 +30,17 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
   (public/wildcard binds prohibited; safe loopback default preserved).
 - [ ] FM0.6 Review the interface manually over PiVPN on the Pi without
   installing it as a service, and collect UX feedback.
-- [ ] FM1 Inventory/backup broker architecture, read-only preflight and
-  permission separation.
+- [x] FM1.1 Authenticated, hardware-inert firmware reference inventory and
+  verified on-disk backup catalog with explicit running-firmware unknown state.
+- [x] FM1.2 Local, root-owned read-only Unix-socket inventory broker that
+  checks peer UID and exposes no executable maintenance actions.
+- [x] FM1.3 Root-only, real-TTY-confirmed two-pass full-flash backup worker
+  for exact YWD AX25R4 and qualified stock identities. Stock and captured-YWD
+  backup trust levels remain distinct; no browser maintenance API.
+- [ ] FM1.4 Operator Pi smoke test of read-only inventory/broker and manual
+  UI review over PiVPN; no live backup without separate maintenance approval.
+- [ ] FM1.5 Protected browser-triggered backup job and real progress console
+  only after secure transport and privileged action isolation are qualified.
 - [ ] FM2 Verified recovery of backups and qualified firmware write.
 - [ ] FM3 Pinned official stock firmware build and guarded flash.
 - [ ] FM4 Progress, logs, service shutdown and production-quality polish.
