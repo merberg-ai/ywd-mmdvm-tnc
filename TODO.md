@@ -1,17 +1,38 @@
 # YWD-MMDVM-TNC TODO / release queue
 
 This document tracks work not yet promoted to the stable `main` branch.
-The current qualified baseline is `dev-webui` and the frozen, physically-qualified
-modem firmware/runtime must remain untouched by passive WebUI release work.
+The latest released baseline is `main` (promoted from `dev-webui` on 2026-10-27).
+All new Firmware Studio work is isolated on `dev-fws`. The frozen,
+physically-qualified modem/firmware runtime must remain untouched.
 
 ## Pre-main WebUI release
 
 - [x] Passive schema-1 monitor, packet logger, and read-only WebUI passed recorded Pi/HAT physical gates (2026-09-10/11).
 - [x] Review the `main...dev-webui` diff and GitHub host CI (2026-10-27).
 - [x] Harden low-level/guided installer upgrades: preserve active WebUI state without enabling inactive installations; add host regression tests (2026-10-27).
-- [ ] Recheck the Raspberry Pi checkout and run all release gates as the normal checkout owner; fix local submodule/bytecode cache ownership before interpreting those failures as source regressions.
+- [x] Recheck the Raspberry Pi checkout and run all three release gates as the checkout owner (2026-10-27).
 - [ ] Verify deployed modem, packet logger, and WebUI stay healthy after the release candidate is installed; no unapproved RF transmit or firmware flashing.
-- [ ] Review final CI and only then fast-forward `main` from the approved candidate.
+- [x] Review final CI and fast-forward `main` to qualified `dev-webui` commit 13465e9d; create checkpoint/dev-webui-main-promoted-2026-10-27 (2026-10-27).
+
+## Firmware Studio development (dev-fws)
+
+Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md).
+
+- [x] FM0.0 Create dev-fws from the qualified main release.
+- [x] FM0.1 Create a separate hardware-inert, loopback-only web application.
+- [x] FM0.2 Add password file setup, scrypt verifier, session TTL, login
+  throttling, same-origin/CSRF protection and strict response headers.
+- [x] FM0.3 Add a dark responsive landing page, locked operation tiles and
+  browser-only status console.
+- [x] FM0.4 Run host CI tests proving no firmware, modem, GPIO, shell or UART
+  API is reachable from the browser.
+- [ ] FM0.5 Review the interface manually through an SSH tunnel on Pi without
+  installing it as a service, and collect UX feedback.
+- [ ] FM1 Inventory/backup broker architecture, read-only preflight and
+  permission separation.
+- [ ] FM2 Verified recovery of backups and qualified firmware write.
+- [ ] FM3 Pinned official stock firmware build and guarded flash.
+- [ ] FM4 Progress, logs, service shutdown and production-quality polish.
 
 ## Deferred: JNOS 2.0q interoperability
 
