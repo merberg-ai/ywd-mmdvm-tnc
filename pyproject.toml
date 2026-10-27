@@ -20,13 +20,16 @@ ywd-tnc-p2-gate = "ywdtnc.p2_qualification:main"
 ywd-tnc-profile = "ywdtnc.profile_cli:main"
 ywd-packetlog = "ywdtnc.packetlog:main"
 ywd-webui = "ywdweb.app:main"
+ywd-fws = "ywdfws.app:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["ywdtnc*", "ywd1278*", "ywdweb*"]
+include = ["ywdtnc*", "ywd1278*", "ywdweb*", "ywdfws*"]
 
 [tool.setuptools.package-data]
 ywdweb = ["static/*.html", "static/*.css", "static/*.js"]
+
+ywdfws = ["static/*.html", "static/*.css", "static/*.js"]
