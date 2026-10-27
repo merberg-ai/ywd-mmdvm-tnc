@@ -37,7 +37,7 @@
     }
     if (job.result) {
       jobSummary.textContent =
-        "Verified stock backups: " + job.result.verified_golden_stock + " · " +
+        "Verified stock backups: " + (job.result.verified_golden_stock === null ? "unknown (restricted)" : job.result.verified_golden_stock) + " · " +
         "Catalog: " + job.result.catalog_source + ". " + job.result.next_action;
     } else if (job.status === "failed") {
       jobSummary.textContent = "Read-only checks failed. No HAT operation was performed.";
@@ -113,8 +113,8 @@
       set("hat-name", hw.mcu + " / " + hw.rf_chip);
       set("hat-spec", hw.tcxo_mhz + " MHz TCXO · " + (hw.flash_size_bytes / 1024) + " KiB · " + hw.uart);
       set("firmware-live", data.running_firmware.state === "not_probed" ? "Not probed" : "Unknown");
-      set("backup-count", String(data.backup_count));
       const restricted = data.backup_access === "restricted";
+      set("backup-count", restricted ? "Unknown" : String(data.backup_count));
       set("backup-access", restricted ? "Root backup directory restricted" : "Catalog checked");
       set("inventory-source", "Source: qualified on-disk hardware manifest; NOT a live HAT scan. Catalog: " +
         (data.catalog_access || "local") + ".");
@@ -146,7 +146,7 @@
         line.append(main, label);
         backups.appendChild(line);
       }
-      message("FM1 inventory refreshed; " + data.backup_count + " catalog entries; live HAT probe not performed");
+      message("FM1 inventory refreshed; " + (restricted ? "root backup count unknown" : data.backup_count + " catalog entries") + "; live HAT probe not performed");
     } catch (error) {
       set("inventory-source", error.message);
       message("Inventory unavailable: " + error.message);
