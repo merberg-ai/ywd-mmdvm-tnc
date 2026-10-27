@@ -55,26 +55,50 @@ def inventory(*, profile_path: Path | None = None, targets_path: Path | None = N
     inaccessible = False
     truncated = False
     for root in backup_roots:
-        base = root / profile.target_id
-        if not base.exists():
-            # Missing base may also be caused by inaccessible parent paths.
-            if root.exists() and not os.access(root, os.R_OK | os.X_OK):
-                inaccessible = True
-            continue
+        # Python versions differ in whether Path.exists()/is_dir() suppress
+        # EACCES. On the Pi, this catalog is commonly owned by root (0700).
+        # Treat *every* unreadable directory as restricted, not as a fatal
+        # error that hides the independent qualified target inventory.
         try:
-            if base.is_symlink() or not base.is_dir():
-                raise ValueError("backup target directory must be a real directory")
+            if root.is_symlink():
+                inaccessible = True
+                continue
+            if not root.exists():
+                continue
+            if not root.is_dir() or not os.access(root, os.R_OK | os.X_OK):
+                inaccessible = True
+                continue
+            base = root / profile.target_id
+            if base.is_symlink():
+                inaccessible = True
+                continue
+            if not base.exists():
+                # The backing root is known to exist, but an inaccessible
+                # target directory may cause an EACCES here on some Pythons.
+                if not os.access(root, os.R_OK | os.X_OK):
+                    inaccessible = True
+                continue
+            if not base.is_dir() or not os.access(base, os.R_OK | os.X_OK):
+                inaccessible = True
+                continue
             dirs = sorted(base.iterdir(), key=lambda p: p.name, reverse=True)
-        except PermissionError:
+        except OSError:
             inaccessible = True
             continue
+
         for path in dirs:
             if len(entries) >= MAX_ENTRIES:
                 truncated = True
                 break
-            if not SAFE_BACKUP_NAME.fullmatch(path.name) or path.is_symlink() or not path.is_dir():
+            try:
+                if not SAFE_BACKUP_NAME.fullmatch(path.name) or path.is_symlink() or not path.is_dir():
+                    continue
+                entry = _inspect_backup(path, profile)
+            except OSError:
+                # Root may race with the directory scan, or a restricted
+                # legacy tree can contain root-protected nested folders.
+                inaccessible = True
                 continue
-            entry = _inspect_backup(path, profile)
             entries.append(entry)
         if truncated:
             break
