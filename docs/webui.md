@@ -114,6 +114,8 @@ The generation increments whenever the WebUI reconnects to the monitor source. I
 
 The low-level installer installs the WebUI package, service definition, and safe configuration without enabling or starting the service automatically:
 
+When upgrading an existing installation, the installer detects whether `ywd-webui.service` was already active. If active, it stops that service before replacing the installed application/virtual environment, then restarts and checks it after the new package is validated. It does not enable a previously disabled service, does not start a previously inactive WebUI, and does not alter WebUI boot enablement. On an interrupted installation, it attempts a best-effort restart of a previously active WebUI and reports when that recovery fails. The low-level installer does not start or restart the modem service.
+
 ```bash
 sudo ./installer/install.sh
 ```
