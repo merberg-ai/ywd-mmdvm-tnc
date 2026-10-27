@@ -45,8 +45,14 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
 - [x] FM1.5a Add optional TLS listener with Secure sessions, session/CSRF
   guarded read-only backup preflight, bounded job events, mobile progress
   view and host regression tests. This does not perform hardware backups.
-- [ ] FM1.5b Qualify HTTPS credentials and access from PiVPN phone, review
-  real read-only preflight results against protected broker catalog.
+- [x] FM1.5b.1 Operator confirmed HTTPS login, mobile UI and read-only
+  preflight over PiVPN on 2026-10-27. Three metadata checks completed.
+  Root broker was not running, so backup count was restricted/unknown.
+- [ ] FM1.5b.2 Validate phone certificate trust (a working self-signed HTTPS
+  connection alone does not establish trusted identity), then run the
+  HTTPS preflight with the separate read-only inventory broker connected.
+- [x] FM1.5b.3 Do not display zero golden-stock backups when root storage is
+  restricted: report unknown until the broker verifies the on-disk catalog.
 - [ ] FM1.5c Design, independently audit and physically qualify a narrowly
   privileged, browser-authorized **real** dual-read backup job; require
   transport trust, per-operation consent, exclusive UART/service ownership,
