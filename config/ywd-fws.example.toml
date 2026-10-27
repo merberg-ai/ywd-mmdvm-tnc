@@ -1,8 +1,13 @@
 # Firmware Studio FM0. Separate from the passive packet-monitor WebUI.
-# On demand only. Never open a public or LAN listener without TLS/auth redesign.
+# On demand only. Loopback stays the default.
+# For temporary PiVPN/WireGuard LAN testing, set listen to the Pi's exact
+# RFC1918 interface address AND set allow_private_bind=true.
+# The login is still plain HTTP on the LAN segment; do not expose publicly,
+# and do not enable firmware-writing operations over this transport.
 [web]
 listen = "127.0.0.1"
 port = 8090
+allow_private_bind = false
 
 [auth]
 password_file = "~/.config/ywd-fws/credentials.json"
