@@ -53,10 +53,21 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
   HTTPS preflight with the separate read-only inventory broker connected.
 - [x] FM1.5b.3 Do not display zero golden-stock backups when root storage is
   restricted: report unknown until the broker verifies the on-disk catalog.
-- [ ] FM1.5c Design, independently audit and physically qualify a narrowly
-  privileged, browser-authorized **real** dual-read backup job; require
-  transport trust, per-operation consent, exclusive UART/service ownership,
-  service recovery and durable audit log. HTTP LAN mode must never trigger it.
+- [x] FM1.5c.1 Implement isolated, manually armed root worker with single-use
+  10-minute approval, per-operation confirmation, Unix peer-UID check,
+  HTTPS/CSRF browser gate, bounded real progress, SHA-256 two-pass verified
+  capture, prior golden-stock check, service recovery verification and
+  root-only durable audit. No generic command, flash or restore API.
+- [x] FM1.5c.2 Add host-only negative tests: unencrypted HTTP, wrong code,
+  expired code, wrong confirmation, repeated attempt, audit symlink,
+  unauthorized status, worker failure and mocked hardware calls.
+- [ ] FM1.5c.3 Conduct independent security review of the broker/auth model,
+  and test certificate trust on the VPN-connected phone. Do not permit
+  physical backup until both are approved.
+- [ ] FM1.5c.4 Operator-controlled Pi maintenance-window acceptance:
+  backup current YWD main flash, verify two independent readbacks, audit,
+  original golden-stock preservation, restored modem service, and traffic.
+  No automatic or unsupervised Pi/HAT run.
 - [ ] FM2 Verified recovery of backups and qualified firmware write.
 - [ ] FM3 Pinned official stock firmware build and guarded flash.
 - [ ] FM4 Progress, logs, service shutdown and production-quality polish.
