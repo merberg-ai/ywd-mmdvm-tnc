@@ -7,6 +7,7 @@ import json
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from ywdfws.app import AuthState, create_server
 from ywdfws.config import StudioConfig, StudioConfigError, load, validate
@@ -186,6 +187,32 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(payload["running_firmware"]["state"], "not_probed")
         self.assertFalse(payload["capabilities"]["backup_browser"])
         self.assertFalse(payload["capabilities"]["flash"])
+
+    def test_fm1_http_inventory_200_when_root_backup_is_restricted(self):
+        from ywdfws.inventory import inventory as read_inventory
+
+        code, body, headers = self.login()
+        self.assertEqual(code, 200)
+        session = headers["Set-Cookie"].split(";", 1)[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            target_id = read_inventory(backup_roots=())["target"]["id"]
+            base = Path(tmp) / target_id
+            base.mkdir()
+            original_iterdir = Path.iterdir
+
+            def deny_backup_list(path):
+                if path == base:
+                    raise PermissionError("simulated root-owned Pi backup storage")
+                return original_iterdir(path)
+
+            with patch.object(Path, "iterdir", deny_backup_list), \\
+                 patch("ywdfws.app.inventory",
+                       lambda: read_inventory(backup_roots=(Path(tmp),))):
+                status, payload, _ = self.request("GET", "/api/inventory",
+                                                  headers={"Cookie": session})
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["backup_access"], "restricted")
+        self.assertFalse(payload["live_probe_performed"])
 
     def test_no_hardware_or_mutating_endpoints(self):
         code, body, headers = self.login()
