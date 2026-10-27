@@ -28,8 +28,8 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
   API is reachable from the browser.
 - [x] FM0.5 Add opt-in specific RFC1918 listener for VPN/LAN development
   (public/wildcard binds prohibited; safe loopback default preserved).
-- [ ] FM0.6 Review the interface manually over PiVPN on the Pi without
-  installing it as a service, and collect UX feedback.
+- [x] FM0.6 Phone/PiVPN review of responsive on-demand Firmware Studio UI
+  without installing it as a service (operator screenshot, 2026-10-27).
 - [x] FM1.1 Authenticated, hardware-inert firmware reference inventory and
   verified on-disk backup catalog with explicit running-firmware unknown state.
 - [x] FM1.2 Local, root-owned read-only Unix-socket inventory broker that
@@ -37,8 +37,11 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
 - [x] FM1.3 Root-only, real-TTY-confirmed two-pass full-flash backup worker
   for exact YWD AX25R4 and qualified stock identities. Stock and captured-YWD
   backup trust levels remain distinct; no browser maintenance API.
-- [ ] FM1.4 Operator Pi smoke test of read-only inventory/broker and manual
-  UI review over PiVPN; no live backup without separate maintenance approval.
+- [x] FM1.4 Operator Pi/PiVPN smoke test of read-only inventory and broker
+  (2026-10-27): browser reported privileged-readonly-broker, one stored
+  original MMDVM_HS_Hat-v1.6.1 backup (20260909-212957) as GOLDEN STOCK /
+  VERIFIED. Running firmware remains not probed. No live backup, HAT reset,
+  service stop, UART access, or firmware write was requested/performed.
 - [ ] FM1.5 Protected browser-triggered backup job and real progress console
   only after secure transport and privileged action isolation are qualified.
 - [ ] FM2 Verified recovery of backups and qualified firmware write.
