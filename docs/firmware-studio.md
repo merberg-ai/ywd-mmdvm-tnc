@@ -19,9 +19,10 @@ flash, query the modem UART, or control GPIO in FM0.
   hardware checks, deliberate approvals, progress and readback.
 - Login alone will never confer permission to flash. No browser field may
   ever become a command passed to a shell interpreter.
-- FM0 supports only IPv4 loopback listeners. To connect from a different
-  computer or phone, use SSH port forwarding. Do not expose 8090 over an
-  unencrypted LAN listener or public router port.
+- FM0 listens only on loopback by default. An **explicitly opted-in**
+  *specific RFC1918 private LAN IPv4 address* is allowed for development over
+  PiVPN/WireGuard. Wildcard (0.0.0.0), public, carrier-grade NAT, link-local
+  and IPv6 binds remain disallowed. Never forward port 8090 on your router.
 
 ## Try FM0 without touching the running TNC
 
@@ -48,6 +49,45 @@ PYTHONPATH=src python3 -m ywdfws.app \
 Open http://127.0.0.1:8090/ locally, sign in, and examine the shell.
 Stop with Ctrl+C. No deployed services are changed or restarted.
 
+### Temporary phone access over PiVPN/WireGuard
+
+When your phone is on the WireGuard VPN, stop the existing FM0 server with
+Ctrl+C and restart it as your normal (non-root) Pi user:
+
+~~~sh
+cd ~/ywd-mmdvm-tnc
+git pull --ff-only origin dev-fws
+bash scripts/check-fws.sh
+PYTHONPATH=src python3 -m ywdfws.app \
+  --config config/ywd-fws.example.toml \
+  --listen 192.168.1.11 --allow-private-bind
+~~~
+
+Open http://192.168.1.11:8090/ on the phone while WireGuard is connected.
+If the Pi now has a different LAN address, substitute its real address.
+This opt-in applies only to the running process and does not alter the safe
+default configuration. It cannot be accessed via a public-facing listener.
+
+For a persistent, **explicit** test profile, edit a local config file to set:
+
+~~~toml
+[web]
+listen = "192.168.1.11"
+port = 8090
+allow_private_bind = true
+~~~
+
+Use that file with --config; the existing [auth] settings should also be
+retained.
+
+**Transport warning:** the HTTP password and session cookie are unencrypted
+on any LAN hop *after* WireGuard terminates at the PiVPN gateway. Use only
+a trusted LAN, restrict TCP/8090 to your trusted VPN client paths where
+possible, and do not use the private-HTTP option for future firmware-write
+functions. Those should require HTTPS or equivalent end-to-end encryption.
+
+### Alternatively: SSH tunnel on a desktop
+
 On a desktop, create an SSH tunnel to the Pi:
 
 ~~~sh
@@ -67,11 +107,13 @@ The product installer does not yet provision or start Firmware Studio.
 - Random server-side sessions with an expiration deadline; cookies use
   HttpOnly and SameSite=Strict. Logout requires session CSRF and same Origin.
 - IP-based login rate limiting, and no-store, framing and CSP restrictions.
-- Host checks help prevent DNS rebinding; non-loopback binds fail closed.
+- Host checks help prevent DNS rebinding; any LAN listener requires an explicit
+  RFC1918 IP and opt-in. Wildcard and public binds fail closed.
 - The console shows local UI events only. It cannot execute commands or
   create synthetic HAT or flash progress records.
-- HTTPS and direct LAN access are not provided in FM0. A future encrypted
-  remote-access design must be reviewed independently.
+- FM0 supports an explicitly opted-in private HTTP bind for VPN-connected
+  development *only*. Future authenticated firmware-write operations must
+  require end-to-end protected transport, not merely a password over HTTP.
 
 ## Roadmap
 
