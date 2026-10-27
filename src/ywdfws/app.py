@@ -248,6 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--init-password", action="store_true")
     group.add_argument("--check", action="store_true")
+    group.add_argument("--check-inventory", action="store_true",
+                       help="diagnose reference profiles and backup visibility, never touch HAT")
     args = parser.parse_args(argv)
     try:
         config = load(args.config)
@@ -264,6 +266,15 @@ def main(argv: list[str] | None = None) -> int:
             print("FWS_PASSWORD_INITIALIZED=YES")
             return 0
         verifier = PasswordVerifier(config.password_file)
+        if args.check_inventory:
+            report = inventory()
+            print("FWS_INVENTORY=PASS")
+            print(f"FWS_REFERENCE_TARGET={report['target']['id']}")
+            print(f"FWS_BACKUP_ACCESS={report['backup_access'].upper()}")
+            print(f"FWS_BACKUP_COUNT={report['backup_count']}")
+            print("FWS_LIVE_PROBE=NO")
+            print("FWS_HARDWARE_ACCESS=NO")
+            return 0
         if args.check:
             print("FWS_CONFIG=PASS")
             print("FWS_AUTH=PASS")
@@ -273,7 +284,7 @@ def main(argv: list[str] | None = None) -> int:
         server = create_server(config, verifier)
         if config.allow_private_bind and config.listen != "127.0.0.1":
             print("WARNING: HTTP on the LAN is unencrypted. WireGuard encrypts only its tunnel segment;")
-            print("         restrict access to trusted clients. No firmware-write API exists in FM0.")
+            print("         restrict access to trusted clients. No firmware-write API exists in FM1.")
         print(f"Firmware Studio FM1: http://{config.listen}:{server.server_port}/")
         print("Read-only firmware inventory; no browser hardware operations. Stop with Ctrl-C.")
         try:
