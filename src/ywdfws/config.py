@@ -23,6 +23,8 @@ class StudioConfig:
     allow_private_bind: bool = False
     password_file: Path = Path("~/.config/ywd-fws/credentials.json")
     session_minutes: int = 30
+    tls_cert_file: Path | None = None
+    tls_key_file: Path | None = None
 
 
 def validate(config: StudioConfig) -> StudioConfig:
@@ -47,6 +49,11 @@ def validate(config: StudioConfig) -> StudioConfig:
         raise StudioConfigError("session_minutes must be 5..240")
     if not isinstance(config.password_file, Path):
         raise StudioConfigError("password_file must be a path")
+    if (config.tls_cert_file is None) != (config.tls_key_file is None):
+        raise StudioConfigError("TLS certificate and private key must be supplied together")
+    for key, value in (("tls.cert_file", config.tls_cert_file), ("tls.key_file", config.tls_key_file)):
+        if value is not None and not isinstance(value, Path):
+            raise StudioConfigError(f"{key} must be a file path")
     return config
 
 
@@ -56,19 +63,26 @@ def load(path: str | Path) -> StudioConfig:
             raw = tomllib.load(handle)
     except (OSError, tomllib.TOMLDecodeError) as exc:
         raise StudioConfigError(f"cannot load firmware studio configuration: {exc}") from exc
-    if set(raw) - {"web", "auth"}:
+    if set(raw) - {"web", "auth", "tls"}:
         raise StudioConfigError("unknown configuration tables")
     web = raw.get("web", {})
     auth = raw.get("auth", {})
-    if not isinstance(web, dict) or not isinstance(auth, dict):
-        raise StudioConfigError("[web] and [auth] must be tables")
+    tls = raw.get("tls", {})
+    if not isinstance(web, dict) or not isinstance(auth, dict) or not isinstance(tls, dict):
+        raise StudioConfigError("[web], [auth], and [tls] must be tables")
     if set(web) - {"listen", "port", "allow_private_bind"} or set(auth) - {"password_file", "session_minutes"}:
         raise StudioConfigError("unknown firmware studio configuration key")
+    if set(tls) - {"cert_file", "key_file"}:
+        raise StudioConfigError("unknown TLS configuration key")
+    if any(not isinstance(v, str) for v in tls.values()):
+        raise StudioConfigError("TLS path values must be strings")
     cfg = StudioConfig(
         listen=web.get("listen", "127.0.0.1"),
         port=web.get("port", 8090),
         allow_private_bind=web.get("allow_private_bind", False),
         password_file=Path(auth.get("password_file", "~/.config/ywd-fws/credentials.json")),
         session_minutes=auth.get("session_minutes", 30),
+        tls_cert_file=Path(tls["cert_file"]).expanduser() if tls.get("cert_file") else None,
+        tls_key_file=Path(tls["key_file"]).expanduser() if tls.get("key_file") else None,
     )
     return validate(cfg)
