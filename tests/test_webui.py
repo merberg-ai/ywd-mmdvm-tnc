@@ -200,5 +200,35 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, 501)
 
 
+class InstallerUpgradeTests(unittest.TestCase):
+    def test_installer_preserves_running_webui_across_reinstall(self) -> None:
+        install = (Path(__file__).resolve().parents[1] / "installer" / "install.sh").read_text(encoding="utf-8")
+        # Only previously active WebUI installations are allowed to restart.
+        self.assertIn('WEBUI_WAS_ACTIVE=no', install)
+        self.assertIn('if systemctl is-active --quiet ywd-webui.service 2>/dev/null; then', install)
+        self.assertIn('WEBUI_WAS_ACTIVE=yes', install)
+        self.assertIn('WEBUI_RESTART_PENDING=yes', install)
+        self.assertIn('systemctl stop ywd-webui.service', install)
+        self.assertIn('if [[ "$WEBUI_WAS_ACTIVE" == yes ]]; then', install)
+        self.assertIn('systemctl restart ywd-webui.service', install)
+        self.assertIn('WEBUI_RESTART_PENDING=no', install)
+        self.assertIn('trap restore_webui_on_exit EXIT', install)
+        self.assertIn('trap - EXIT', install)
+        # Stop before replacing source/venv, and restart only after validating
+        # the newly installed WebUI application.
+        self.assertLess(install.index('systemctl stop ywd-webui.service'), install.index('rm -rf "$SOURCE"'))
+        self.assertLess(install.index('rm -rf "$VENV"'), install.index('systemctl restart ywd-webui.service'))
+        self.assertLess(install.index('Validating installed passive WebUI'), install.index('systemctl restart ywd-webui.service'))
+        self.assertNotIn('systemctl enable ywd-webui.service', install)
+        self.assertNotIn('systemctl enable --now ywd-webui.service', install)
+
+    def test_installer_fallback_does_not_hide_primary_error(self) -> None:
+        install = (Path(__file__).resolve().parents[1] / "installer" / "install.sh").read_text(encoding="utf-8")
+        self.assertIn('restore_webui_on_exit() {', install)
+        self.assertIn('if [[ "$WEBUI_RESTART_PENDING" == yes ]]; then', install)
+        self.assertIn('systemctl start ywd-webui.service', install)
+        self.assertIn('WebUI could not be restarted after incomplete install', install)
+
+
 if __name__ == "__main__":
     unittest.main()
