@@ -7,6 +7,11 @@ import ipaddress
 import tomllib
 
 
+RFC1918_NETWORKS = tuple(ipaddress.IPv4Network(cidr) for cidr in (
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"
+))
+
+
 class StudioConfigError(ValueError):
     pass
 
@@ -15,6 +20,7 @@ class StudioConfigError(ValueError):
 class StudioConfig:
     listen: str = "127.0.0.1"
     port: int = 8090
+    allow_private_bind: bool = False
     password_file: Path = Path("~/.config/ywd-fws/credentials.json")
     session_minutes: int = 30
 
@@ -22,10 +28,17 @@ class StudioConfig:
 def validate(config: StudioConfig) -> StudioConfig:
     try:
         address = ipaddress.ip_address(config.listen)
-    except ValueError as exc:
-        raise StudioConfigError("listen must be an IPv4 loopback address") from exc
-    if address.version != 4 or not address.is_loopback:
-        raise StudioConfigError("FM0 accepts loopback listeners only; use an SSH tunnel for remote access")
+    except (TypeError, ValueError) as exc:
+        raise StudioConfigError("listen must be a numeric IPv4 address") from exc
+    if address.version != 4 or address.is_unspecified or address.is_multicast:
+        raise StudioConfigError("listen must be a specific IPv4 loopback or RFC1918 address")
+    if not isinstance(config.allow_private_bind, bool):
+        raise StudioConfigError("allow_private_bind must be true or false")
+    if not address.is_loopback:
+        if not config.allow_private_bind:
+            raise StudioConfigError("private LAN listening requires allow_private_bind=true")
+        if not any(address in network for network in RFC1918_NETWORKS):
+            raise StudioConfigError("only RFC1918 private LAN addresses are permitted")
     if isinstance(config.port, bool) or not isinstance(config.port, int) or not 1 <= config.port <= 65535:
         raise StudioConfigError("port must be 1..65535")
     if (isinstance(config.session_minutes, bool) or
@@ -49,11 +62,12 @@ def load(path: str | Path) -> StudioConfig:
     auth = raw.get("auth", {})
     if not isinstance(web, dict) or not isinstance(auth, dict):
         raise StudioConfigError("[web] and [auth] must be tables")
-    if set(web) - {"listen", "port"} or set(auth) - {"password_file", "session_minutes"}:
+    if set(web) - {"listen", "port", "allow_private_bind"} or set(auth) - {"password_file", "session_minutes"}:
         raise StudioConfigError("unknown firmware studio configuration key")
     cfg = StudioConfig(
         listen=web.get("listen", "127.0.0.1"),
         port=web.get("port", 8090),
+        allow_private_bind=web.get("allow_private_bind", False),
         password_file=Path(auth.get("password_file", "~/.config/ywd-fws/credentials.json")),
         session_minutes=auth.get("session_minutes", 30),
     )
