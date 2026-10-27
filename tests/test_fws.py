@@ -205,9 +205,11 @@ class HTTPTests(unittest.TestCase):
                     raise PermissionError("simulated root-owned Pi backup storage")
                 return original_iterdir(path)
 
-            with patch.object(Path, "iterdir", deny_backup_list), \\
-                 patch("ywdfws.app.inventory",
-                       lambda: read_inventory(backup_roots=(Path(tmp),))):
+            with (
+                patch.object(Path, "iterdir", deny_backup_list),
+                patch("ywdfws.app.inventory",
+                      lambda: read_inventory(backup_roots=(Path(tmp),))),
+            ):
                 status, payload, _ = self.request("GET", "/api/inventory",
                                                   headers={"Cookie": session})
         self.assertEqual(status, 200)
