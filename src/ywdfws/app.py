@@ -275,6 +275,9 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
             self._json(404, {"error": "unknown endpoint"})
 
     def do_POST(self) -> None:
+        # Never reuse a connection after a rejected/oversized JSON body.
+        # This prevents unread request bytes being parsed as a second command.
+        self.close_connection = True
         if not self._trusted_host():
             self._json(421, {"error": "untrusted host"})
             return
