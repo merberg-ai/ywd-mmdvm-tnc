@@ -1,6 +1,6 @@
 # YWD Firmware Studio
 
-**Status:** FM1 development on dev-fws. Inventory is browser-accessible; hardware backup requires explicit root terminal authorization. No browser firmware operations.
+**Status:** FM1.5a development on dev-fws. Browser has inventory and a read-only preflight workflow, plus optional HTTPS. No browser-triggered hardware backup or firmware write.
 
 Firmware Studio is a separate, on-demand web application. It is not the
 qualified, always-on, read-only packet monitor WebUI, and cannot transmit,
@@ -201,6 +201,78 @@ Root-private backup files remain in the existing backup root, with
 served from the WebUI, no arbitrary backup paths are accepted from a
 browser, and no firmware-writing operations exist in this milestone.
 
+## FM1.5a: protected transport and read-only job framework
+
+The overview now offers **Run read-only preflight**. This is a narrowly
+allowlisted, authenticated POST that performs metadata checks only:
+
+1. Load the exact qualified reference profile, **not** a live HAT probe.
+2. Read/verify backup metadata using the already-running read-only inventory
+   broker, or report the restricted local catalog when no broker is running.
+3. Show an actual three-step progress record and timestamped console events.
+
+Results include how many golden stock backups passed validation, whether the
+catalog was restricted, and the next manual action. A completed preflight
+**does not establish that the installed HAT identity is known or authorize
+a real backup**. It never opens the modem UART, changes GPIO, stops services,
+runs subprocesses, or touches flash. The existing terminal-only backup worker
+is not called by the web server or this new job handler.
+
+The job API is restricted to:
+
+- POST /api/jobs/preflight: exact no-parameter command, authenticated
+  session, matching Origin and X-CSRF-Token. Returns a session-scoped random
+  job ID. Other job operations are 404.
+- GET /api/jobs/{id}: only the browser session that created the job can read
+  its progress. Events are bounded in memory and discarded on server exit.
+- Jobs cannot overlap. Progress counts metadata stages, **not bytes flashed**.
+
+There is still no browser-triggered **physical** backup, flash, restore,
+root-side command, or privileged maintenance action. Those remain pending
+separate transport, service, worker authorization and Pi acceptance.
+
+### Optional HTTPS listener for the private LAN
+
+FM0/early FM1 could only serve HTTP for temporary PiVPN LAN tests. FM1.5a
+offers optional native TLS using certificate/private-key files. The private
+key must be owned by the unprivileged web user, be a regular (not symlink)
+file, and have no group/other permissions. The service requires TLS 1.2+
+and sends Secure, HttpOnly, SameSite=Strict session cookies over HTTPS.
+
+For a **temporary self-signed test certificate** matching the current Pi
+address (replace the address if it changes), use the normal ywd shell:
+
+~~~sh
+cd ~/ywd-mmdvm-tnc
+mkdir -p ~/.config/ywd-fws/tls
+chmod 700 ~/.config/ywd-fws/tls
+openssl req -x509 -newkey rsa:3072 -nodes -sha256 -days 30 \
+  -subj "/CN=192.168.1.11" \
+  -addext "subjectAltName=IP:192.168.1.11" \
+  -keyout ~/.config/ywd-fws/tls/server.key \
+  -out ~/.config/ywd-fws/tls/server.crt
+chmod 600 ~/.config/ywd-fws/tls/server.key
+
+PYTHONPATH=src python3 -m ywdfws.app \
+  --config config/ywd-fws.example.toml \
+  --listen 192.168.1.11 --allow-private-bind \
+  --tls-cert ~/.config/ywd-fws/tls/server.crt \
+  --tls-key ~/.config/ywd-fws/tls/server.key
+~~~
+
+Connect at https://192.168.1.11:8090/ while PiVPN is active.
+A self-signed certificate will produce a browser trust warning unless
+its certificate/CA is installed and trusted; do not casually ignore
+identity warnings on an untrusted LAN. Check certificate fingerprint
+out-of-band if using an exception. Proper trusted TLS is necessary
+before considering browser-triggered privileged maintenance.
+
+You can still launch with the prior HTTP command for **read-only**
+inventory and preflight UI testing, but it provides no end-to-end
+encryption after the WireGuard exit. Prefer HTTPS for password/session
+confidentiality. Do NOT router-forward this endpoint. The FM1.5a
+read-only preflight is still not permission to perform a hardware backup.
+
 ## Security in FM0
 
 - Owner-only mode-0600 credentials and salted scrypt hash; no plaintext
@@ -222,6 +294,9 @@ browser, and no firmware-writing operations exist in this milestone.
 - FM1: reference inventory, verified backup catalog via read-only Unix broker,
   and separate operator-authorized dual-read stock/YWD backup CLI. The WebUI
   cannot trigger UART/backup, and future secure action transport remains TODO.
+- FM1.5a: optional HTTPS and authenticated, session-scoped read-only
+  backup-readiness preflight with real metadata stage events. Host-gated;
+  future browser authorization of actual hardware backups is not implemented.
 - FM2: qualified YWD flashing and verified stock backup restore; physical
   target checks, recovery of unbootable firmware, readback verification,
   approval and safe daemon lifecycle.
