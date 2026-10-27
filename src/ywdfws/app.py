@@ -21,6 +21,7 @@ from .security import PasswordVerifier, SecurityError, initialize_interactive
 from .inventory import inventory
 from .broker import fetch as fetch_inventory_broker
 from .maintenance_jobs import JobManager, JobConflict
+from .maintenance_broker import request as maintenance_request, CONFIRM_PHRASE
 
 
 @dataclass
@@ -85,6 +86,8 @@ class FirmwareStudioServer(ThreadingHTTPServer):
         self.config = config
         self.auth = AuthState(verifier, session_minutes=config.session_minutes)
         self.jobs = JobManager()
+        self.maintenance_lock = threading.RLock()
+        self.maintenance_owners: dict[str, str] = {}
         self.secure_transport = config.tls_cert_file is not None
         super().__init__((config.listen, config.port), FirmwareStudioHandler)
         if self.secure_transport:
@@ -192,6 +195,45 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                 self._json(401, {"authenticated": False})
             else:
                 self._json(200, {"authenticated": True, "csrf": session.csrf})
+        elif self.path == "/api/maintenance/ready":
+            if self._session() is None:
+                self._json(401, {"error": "authentication required"})
+            elif not self.server.secure_transport:
+                self._json(200, {"available": False, "reason": "HTTPS required",
+                                 "armed": False, "flash_allowed": False})
+            else:
+                try:
+                    result = maintenance_request("READY")
+                    self._json(200, {"available": result.get("enabled") is True and result.get("armed") is True,
+                                     "armed": result.get("armed") is True,
+                                     "busy": result.get("busy") is True,
+                                     "reason": "One-time root operator approval required",
+                                     "flash_allowed": False})
+                except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                    self._json(200, {"available": False, "armed": False, "busy": False,
+                                     "reason": "Root maintenance worker not running",
+                                     "flash_allowed": False})
+        elif self.path.startswith("/api/maintenance/backup/"):
+            if self._session() is None:
+                self._json(401, {"error": "authentication required"})
+            elif not self.server.secure_transport:
+                self._json(403, {"error": "HTTPS required"})
+            else:
+                ident = self.path.removeprefix("/api/maintenance/backup/")
+                with self.server.maintenance_lock:
+                    owner = self.server.maintenance_owners.get(ident)
+                if (not ident or owner is None or
+                        not secrets.compare_digest(owner, self._session_cookie())):
+                    self._json(404, {"error": "unknown backup job"})
+                else:
+                    try:
+                        result = maintenance_request("STATUS", job_id=ident)
+                        if "error" in result:
+                            self._json(404, {"error": "unknown backup job"})
+                        else:
+                            self._json(200, result)
+                    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                        self._json(503, {"error": "maintenance broker unavailable; backup may still be running"})
         elif self.path == "/api/inventory":
             if self._session() is None:
                 self._json(401, {"error": "authentication required"})
@@ -227,6 +269,7 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                                  "inventory_available": True,
                                  "https": self.server.secure_transport,
                                  "read_only_preflight_available": True,
+                                 "browser_backup_requires_tls_and_one_time_root_code": True,
                                  "flash_enabled": False, "stock_builder_enabled": False})
         else:
             self._json(404, {"error": "unknown endpoint"})
@@ -238,7 +281,36 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
         if not self._origin_ok():
             self._json(403, {"error": "origin rejected"})
             return
-        if self.path == "/api/login":
+        if self.path == "/api/maintenance/backup":
+            session = self._session()
+            if session is None:
+                self._json(401, {"error": "authentication required"})
+            elif not self.server.secure_transport:
+                self._json(403, {"error": "HTTPS required for hardware maintenance"})
+            elif not secrets.compare_digest(self.headers.get("X-CSRF-Token", ""), session.csrf):
+                self._json(403, {"error": "CSRF verification failed"})
+            else:
+                data = self._read_json()
+                if (data is None or set(data) != {"authorization", "confirmation"} or
+                        not isinstance(data["authorization"], str) or
+                        not isinstance(data["confirmation"], str) or
+                        len(data["authorization"]) > 128 or
+                        data["confirmation"] != CONFIRM_PHRASE):
+                    self._json(400, {"error": "exact one-time code and confirmation required"})
+                else:
+                    try:
+                        result = maintenance_request("START_BACKUP",
+                            authorization=data["authorization"],
+                            confirmation=data["confirmation"])
+                        if "error" in result:
+                            self._json(409, {"error": result["error"]})
+                        else:
+                            with self.server.maintenance_lock:
+                                self.server.maintenance_owners[result["id"]] = self._session_cookie()
+                            self._json(202, result)
+                    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                        self._json(503, {"error": "root maintenance worker unavailable"})
+        elif self.path == "/api/login":
             if self.server.auth.blocked(self.client_address[0]):
                 self._json(429, {"error": "too many attempts; try again later"})
                 return
