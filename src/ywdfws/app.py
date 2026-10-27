@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass, replace
+import ssl
+import stat
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
@@ -18,6 +20,7 @@ from .config import StudioConfig, StudioConfigError, load, validate
 from .security import PasswordVerifier, SecurityError, initialize_interactive
 from .inventory import inventory
 from .broker import fetch as fetch_inventory_broker
+from .maintenance_jobs import JobManager, JobConflict
 
 
 @dataclass
@@ -81,7 +84,27 @@ class FirmwareStudioServer(ThreadingHTTPServer):
     def __init__(self, config: StudioConfig, verifier: PasswordVerifier):
         self.config = config
         self.auth = AuthState(verifier, session_minutes=config.session_minutes)
+        self.jobs = JobManager()
+        self.secure_transport = config.tls_cert_file is not None
         super().__init__((config.listen, config.port), FirmwareStudioHandler)
+        if self.secure_transport:
+            key = config.tls_key_file.expanduser()
+            cert = config.tls_cert_file.expanduser()
+            info = key.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid() or info.st_mode & 0o077:
+                self.server_close()
+                raise SecurityError("TLS private key must be a regular, non-symlink, owner-only file (0600)")
+            if cert.is_symlink() or not cert.is_file():
+                self.server_close()
+                raise SecurityError("TLS certificate must be a regular non-symlink file")
+            try:
+                context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                context.minimum_version = ssl.TLSVersion.TLSv1_2
+                context.load_cert_chain(certfile=str(cert), keyfile=str(key))
+                self.socket = context.wrap_socket(self.socket, server_side=True)
+            except Exception:
+                self.server_close()
+                raise
 
 
 class FirmwareStudioHandler(BaseHTTPRequestHandler):
@@ -123,7 +146,8 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
 
     def _origin_ok(self) -> bool:
         host = self.headers.get("Host", "")
-        return self.headers.get("Origin", "") == f"http://{host}"
+        scheme = "https" if self.server.secure_transport else "http"
+        return self.headers.get("Origin", "") == f"{scheme}://{host}"
 
     def _session_cookie(self) -> str:
         raw = self.headers.get("Cookie", "")
@@ -181,6 +205,19 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                     self._json(200, report)
                 except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
                     self._json(503, {"error": "inventory unavailable; check installed manifests"})
+        elif self.path.startswith("/api/jobs/"):
+            if self._session() is None:
+                self._json(401, {"error": "authentication required"})
+            else:
+                ident = self.path.removeprefix("/api/jobs/")
+                if not ident or len(ident) > 64 or not ident.isalnum() and not all(ch.isalnum() or ch in "-_" for ch in ident):
+                    self._json(404, {"error": "unknown job"})
+                else:
+                    job = self.server.jobs.get(self._session_cookie(), ident)
+                    if job is None:
+                        self._json(404, {"error": "unknown job"})
+                    else:
+                        self._json(200, job)
         elif self.path == "/api/status":
             if self._session() is None:
                 self._json(401, {"error": "authentication required"})
@@ -188,6 +225,8 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                 self._json(200, {"product": "YWD Firmware Studio", "phase": "FM1",
                                  "hardware_access": False, "firmware_operations": False,
                                  "inventory_available": True,
+                                 "https": self.server.secure_transport,
+                                 "read_only_preflight_available": True,
                                  "flash_enabled": False, "stock_builder_enabled": False})
         else:
             self._json(404, {"error": "unknown endpoint"})
@@ -212,8 +251,23 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                 self._json(401, {"error": "invalid credentials"})
                 return
             token, csrf = result
-            cookie = f"fws_session={token}; Path=/; HttpOnly; SameSite=Strict"
+            secure = "; Secure" if self.server.secure_transport else ""
+            cookie = f"fws_session={token}; Path=/; HttpOnly; SameSite=Strict{secure}"
             self._json(200, {"authenticated": True, "csrf": csrf}, cookie)
+        elif self.path == "/api/jobs/preflight":
+            session = self._session()
+            if session is None:
+                self._json(401, {"error": "authentication required"})
+            elif not secrets.compare_digest(self.headers.get("X-CSRF-Token", ""), session.csrf):
+                self._json(403, {"error": "CSRF verification failed"})
+            elif self.headers.get("Content-Length") not in (None, "0"):
+                self._json(400, {"error": "this operation accepts no parameters"})
+            else:
+                try:
+                    job = self.server.jobs.start(self._session_cookie())
+                    self._json(202, job)
+                except JobConflict:
+                    self._json(409, {"error": "read-only preflight already running"})
         elif self.path == "/api/logout":
             token = self._session_cookie()
             session = self.server.auth.get(token)
@@ -224,7 +278,8 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
             else:
                 self.server.auth.logout(token)
                 self._json(200, {"authenticated": False},
-                           "fws_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict")
+                           "fws_session=; Path=/; Max-Age=0; HttpOnly; SameSite=Strict" +
+                           ("; Secure" if self.server.secure_transport else ""))
         else:
             self._json(404, {"error": "operation not available in FM0"})
 
@@ -243,6 +298,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="override listener with an exact IPv4 address")
     parser.add_argument("--port", type=int, default=None,
                         help="override HTTP port")
+    parser.add_argument("--tls-cert", default=None, help="optional PEM TLS certificate")
+    parser.add_argument("--tls-key", default=None, help="optional private TLS key (0600)")
     parser.add_argument("--allow-private-bind", action="store_true",
                         help="explicitly authorize RFC1918 private LAN listener for VPN testing")
     group = parser.add_mutually_exclusive_group()
@@ -258,6 +315,8 @@ def main(argv: list[str] | None = None) -> int:
             listen=args.listen if args.listen is not None else config.listen,
             port=args.port if args.port is not None else config.port,
             allow_private_bind=config.allow_private_bind or args.allow_private_bind,
+            tls_cert_file=Path(args.tls_cert).expanduser() if args.tls_cert else config.tls_cert_file,
+            tls_key_file=Path(args.tls_key).expanduser() if args.tls_key else config.tls_key_file,
         ))
         if os.geteuid() == 0:
             raise SecurityError("Do not run the web server or password setup as root")
@@ -282,10 +341,11 @@ def main(argv: list[str] | None = None) -> int:
             print("FWS_FLASH_ENABLED=NO")
             return 0
         server = create_server(config, verifier)
-        if config.allow_private_bind and config.listen != "127.0.0.1":
+        if config.allow_private_bind and config.listen != "127.0.0.1" and not server.secure_transport:
             print("WARNING: HTTP on the LAN is unencrypted. WireGuard encrypts only its tunnel segment;")
             print("         restrict access to trusted clients. No firmware-write API exists in FM1.")
-        print(f"Firmware Studio FM1: http://{config.listen}:{server.server_port}/")
+        scheme = "https" if server.secure_transport else "http"
+        print(f"Firmware Studio FM1.5: {scheme}://{config.listen}:{server.server_port}/")
         print("Read-only firmware inventory; no browser hardware operations. Stop with Ctrl-C.")
         try:
             server.serve_forever(poll_interval=0.25)
@@ -294,7 +354,7 @@ def main(argv: list[str] | None = None) -> int:
         finally:
             server.server_close()
         return 0
-    except (StudioConfigError, SecurityError, OSError, ValueError, json.JSONDecodeError) as exc:
+    except (StudioConfigError, SecurityError, OSError, ValueError, ssl.SSLError, json.JSONDecodeError) as exc:
         print(f"FWS_ERROR={exc}", file=sys.stderr)
         return 2
 
