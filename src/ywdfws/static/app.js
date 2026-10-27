@@ -87,6 +87,120 @@
   });
 
 
+  // FM1.5c: separate HTTPS-only root-broker backup. No generic command endpoint.
+  const refreshWorkerButton = document.getElementById("refresh-worker");
+  const backupForm = document.getElementById("hardware-backup-form");
+  const approvalInput = document.getElementById("backup-approval");
+  const phraseInput = document.getElementById("backup-phrase");
+  const startBackupButton = document.getElementById("backup-start");
+  const backupBox = document.getElementById("backup-operation");
+  const backupMeter = document.getElementById("backup-meter");
+  const backupJobSummary = document.getElementById("backup-job-summary");
+  let hardwareJobId = null;
+  let hardwarePoll = null;
+  const hardwareEvents = new Set();
+  function stopHardwarePoll() {
+    if (hardwarePoll !== null) clearTimeout(hardwarePoll);
+    hardwarePoll = null;
+  }
+  async function checkHardwareWorker() {
+    backupForm.hidden = true;
+    refreshWorkerButton.disabled = true;
+    set("backup-worker-state", "Checking root maintenance authorization…");
+    try {
+      const result = await request("/api/maintenance/ready");
+      if (!result.ok) throw new Error("Worker check failed (" + result.code + ")");
+      if (!result.body.available) {
+        const reason = result.body.reason || "No armed maintenance worker";
+        set("backup-worker-state", "Locked: " + reason + ". HTTPS and a root-terminal one-time code are required.");
+      } else {
+        set("backup-worker-state", "Root worker armed. One operation permitted. Enter the exact code shown in its root terminal.");
+        backupForm.hidden = false;
+      }
+    } catch (error) {
+      set("backup-worker-state", "Maintenance worker unavailable: " + error.message);
+    } finally {
+      refreshWorkerButton.disabled = !csrf;
+    }
+  }
+  function showHardwareJob(job) {
+    backupBox.hidden = false;
+    backupMeter.value = job.steps_completed;
+    set("backup-job-count", job.steps_completed + " / " + job.steps_total + " stages");
+    set("backup-job-state", job.status === "running" ? "HAT backup in progress" :
+        job.status === "completed" ? "Backup verified" : "Backup failed / recovery required");
+    for (const event of job.events || []) {
+      const key = job.id + ":" + event.seq;
+      if (!hardwareEvents.has(key)) {
+        hardwareEvents.add(key);
+        message("[HAT BACKUP] " + event.message);
+      }
+    }
+    if (job.status === "completed") {
+      backupJobSummary.textContent = "Two full-flash reads verified. Type: " +
+        job.backup_kind + "; SHA-256: " + job.sha256 +
+        ". Flash and option bytes were not written.";
+    } else if (job.status === "failed") {
+      backupJobSummary.textContent =
+        "Backup failed. Inspect the root worker terminal, verify modem service recovery and preserve the original stock backup.";
+    } else {
+      backupJobSummary.textContent =
+        "Do not stop the worker or power-cycle the Pi. A firmware READ and HAT reset may be in progress.";
+    }
+  }
+  async function pollHardwareJob(id) {
+    try {
+      const result = await request("/api/maintenance/backup/" + encodeURIComponent(id));
+      if (!result.ok) throw new Error(result.body.error || "Backup worker not reachable");
+      if (hardwareJobId !== id) return;
+      showHardwareJob(result.body);
+      if (result.body.status === "running") {
+        hardwarePoll = setTimeout(() => pollHardwareJob(id), 900);
+      }
+    } catch (error) {
+      if (hardwareJobId === id) {
+        backupJobSummary.textContent = "Status unavailable: " + error.message +
+          ". The backup may STILL be running; check the root worker terminal before retrying.";
+        message("[HAT BACKUP] Lost worker status; no automatic retry.");
+      }
+    }
+  }
+  backupForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!csrf || hardwareJobId) return;
+    startBackupButton.disabled = true;
+    backupBox.hidden = false;
+    backupMeter.value = 0;
+    set("backup-job-state", "Requesting root authorization");
+    backupJobSummary.textContent = "Submitting one-time approval to the separate root worker.";
+    const approval = approvalInput.value;
+    const confirmation = phraseInput.value;
+    approvalInput.value = "";
+    phraseInput.value = "";
+    try {
+      const result = await request("/api/maintenance/backup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+        body: JSON.stringify({ authorization: approval, confirmation }),
+      });
+      if (!result.ok) {
+        backupJobSummary.textContent = result.body.error || "Backup authorization rejected";
+        message("[HAT BACKUP] Authorization rejected; no automatic retry.");
+        return;
+      }
+      hardwareJobId = result.body.id;
+      backupForm.hidden = true;
+      showHardwareJob(result.body);
+      await pollHardwareJob(hardwareJobId);
+    } catch (error) {
+      backupJobSummary.textContent = "Request failed: " + error.message +
+        ". Check root worker status before any attempt to retry.";
+    } finally {
+      startBackupButton.disabled = false;
+    }
+  });
+  refreshWorkerButton.addEventListener("click", checkHardwareWorker);
+
   function message(text) {
     const line = document.createElement("div");
     const prefix = document.createElement("span");
@@ -165,7 +279,9 @@
         logout.hidden = false;
         state.textContent = "AUTHENTICATED / FM1.5";
         preflightButton.disabled = false;
+        refreshWorkerButton.disabled = false;
         message("Authenticated browser session established; firmware writes disabled");
+        await checkHardwareWorker();
         await loadInventory();
       } else {
         csrf = "";
@@ -175,6 +291,10 @@
         stopPolling();
         lastJob = null;
         preflightButton.disabled = true;
+        refreshWorkerButton.disabled = true;
+        backupForm.hidden = true;
+        stopHardwarePoll();
+        hardwareJobId = null;
       }
     } catch (_) {
       overlay.hidden = false;
