@@ -185,7 +185,8 @@ class BrowserSecurityTests(unittest.TestCase):
 
     def test_unencrypted_http_cannot_trigger_hardware_regardless_of_code(self):
         with patch("ywdfws.app.maintenance_request") as root:
-            self.assertEqual(self.request("POST", "/api/maintenance/backup")[0], 401)
+            self.assertEqual(self.request("POST", "/api/maintenance/backup",
+                headers={"Origin": f"http://127.0.0.1:{self.port}"})[0], 401)
             self.login()
             code, status = self.request("GET", "/api/maintenance/ready")
             self.assertEqual(code, 401)  # no session
