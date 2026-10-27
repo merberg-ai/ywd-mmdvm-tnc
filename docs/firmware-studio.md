@@ -116,6 +116,23 @@ After starting Firmware Studio and signing in, the overview loads the
 NOT claim to live-detect the installed firmware. The modem can keep
 running, and the existing monitor on port 8088 is unchanged.
 
+FM1 recognizes root-owned, inaccessible backup directories as a **restricted**
+catalog rather than failing the entire inventory endpoint (Pi filesystem
+permissions differ from GitHub CI). Run this non-root, hardware-inert diagnostic
+from the source checkout to verify the manifest and catalog separately:
+
+~~~sh
+cd ~/ywd-mmdvm-tnc
+PYTHONPATH=src python3 -m ywdfws.app \
+  --config config/ywd-fws.example.toml --check-inventory
+~~~
+
+Expected output includes FWS_INVENTORY=PASS and FWS_LIVE_PROBE=NO.
+FWS_BACKUP_ACCESS=RESTRICTED is normal for an unprivileged process when
+the qualified stock backups are root-protected. If this diagnostic fails,
+its FWS_ERROR output identifies the read-only cause without needing to
+change file ownership, chmod backup folders, or stop the TNC.
+
 ### Optional root-only *read-only* backup catalog
 
 The existing stock rollback backups are normally stored with root-only
