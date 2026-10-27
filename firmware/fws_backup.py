@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import subprocess
 import sys
 import time
 
@@ -48,7 +49,7 @@ def read_interactive_confirmation() -> None:
         raise qf.FlashError("backup cancelled by operator")
 
 
-def capture_current_firmware(profile, device: str, identity: str) -> Path:
+def capture_current_firmware(profile, device: str, identity: str, progress=None) -> Path:
     """Create a verified but NOT restoration-qualified two-pass YWD image."""
     timestamp = time.strftime("%Y%m%d-%H%M%S", time.localtime())
     directory = qf.BACKUP_ROOT / profile.target_id / f"FWS-{timestamp}-{secrets.token_hex(4)}"
@@ -60,7 +61,9 @@ def capture_current_firmware(profile, device: str, identity: str) -> Path:
                          expected_device=profile.expected_device_id)
     try:
         boot.enter()
-        for dest in (a, b):
+        for idx, dest in enumerate((a, b)):
+            if progress:
+                progress(f"Reading 128 KiB main flash: pass {idx+1} of 2", "read_a" if idx == 0 else "read_b")
             qf.run(["stm32flash", "-b", "115200", "-r", str(dest), "-S",
                     f"{profile.flash_base}:{profile.stock_flash_size_bytes}", device])
             os.chmod(dest, 0o600)
@@ -68,6 +71,8 @@ def capture_current_firmware(profile, device: str, identity: str) -> Path:
                 raise qf.FlashError("full main-flash read size mismatch")
         if a.read_bytes() != b.read_bytes():
             raise qf.FlashError("independent main-flash reads differ; refusing to save backup")
+        if progress:
+            progress("Both flash reads match; calculating SHA-256 and saving backup", "verify")
         digest = qf.sha256_file(a)
         os.replace(a, image)
         os.chmod(image, 0o600)
@@ -91,6 +96,8 @@ def capture_current_firmware(profile, device: str, identity: str) -> Path:
         path = directory / "manifest.json"
         path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         os.chmod(path, 0o600)
+        if progress:
+            progress("Captured firmware integrity verified and manifest saved", "verify")
         print("FWS_BACKUP_TWO_PASS_VERIFIED=PASS")
         print("FWS_BACKUP_KIND=CAPTURED_FIRMWARE")
         print("FWS_RESTORE_QUALIFIED=NO")
@@ -103,35 +110,91 @@ def capture_current_firmware(profile, device: str, identity: str) -> Path:
         b.unlink(missing_ok=True)
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description="FM1 two-pass firmware backup (root/TTY only)")
-    parser.add_argument("operation", choices=("backup",))
-    args = parser.parse_args()
-    device = "/dev/ttyAMA0"  # qualified Pi 5 path, never accept an arbitrary browser-supplied path
-    try:
-        qf.require_root()
-        qf.require_tools()
-        profile = qf.load_profile(qf.PROFILE_PATH)
-        qf.verify_core_pin(profile.qualified_core_commit)
-        target = qf.load_target(profile.target_id)
+
+def _active_modem_units() -> list[str]:
+    return [unit for unit in qf.KNOWN_MODEM_UNITS
+            if subprocess.run(["systemctl", "is-active", "--quiet", unit],
+                              stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL, check=False).returncode == 0]
+
+
+def perform_backup(*, progress=None, authorized_by_broker: bool = False) -> dict:
+    """One qualified dual-read maintenance operation.
+
+    Browser mode is permitted ONLY via the root maintenance broker which
+    separately enforces a one-time root-TTY-issued approval code.
+    The direct CLI remains TTY + typed-confirmation only.
+    """
+    device = "/dev/ttyAMA0"
+    qf.require_root()
+    qf.require_tools()
+    profile = qf.load_profile(qf.PROFILE_PATH)
+    qf.verify_core_pin(profile.qualified_core_commit)
+    target = qf.load_target(profile.target_id)
+    if not authorized_by_broker:
         read_interactive_confirmation()
-        if not Path(device).exists():
-            raise qf.FlashError(f"qualified UART does not exist: {device}")
-        with exclusive_operation():
+    if not Path(device).exists():
+        raise qf.FlashError(f"qualified UART does not exist: {device}")
+    if progress:
+        progress("Verified exact qualified target and read-only backup plan", "preflight")
+
+    with exclusive_operation():
+        # Preserve and validate the existing stock rollback before touching
+        # a running YWD application. No new backup may overwrite the golden.
+        golden = qf.find_verified_stock_backup(profile)
+        if golden is None:
+            raise qf.FlashError("no verified golden stock backup exists; refusing maintenance")
+        qf.verify_stock_backup(profile, golden)
+        if progress:
+            progress("Existing golden stock rollback verified; preparing modem service pause", "service_stop")
+
+        original_active = _active_modem_units()
+        try:
             with qf.stopped_known_modem_owners(device, restore=True):
+                if progress:
+                    progress("Modem UART released; probing qualified running identity", "probe")
                 identity = qf.probe_identity(device, profile.target_id)
                 if identity == profile.expected_identity:
-                    capture_current_firmware(profile, device, identity)
+                    captured = capture_current_firmware(profile, device, identity, progress=progress)
+                    digest = qf.sha256_file(captured / "captured-flash.bin")
+                    kind = "captured_firmware"
                 elif qf.stock_identity(target, identity):
-                    qf.make_stock_backup(profile, target, device, identity)
+                    if progress:
+                        progress("Reading exact allowlisted stock firmware using qualified backup path", "read_a")
+                    captured = qf.make_stock_backup(profile, target, device, identity)
+                    digest = qf.verify_stock_backup(profile, captured)
+                    kind = "golden_stock"
+                    if progress:
+                        progress("Qualified stock backup passed two-pass hash verification", "verify")
                 else:
-                    raise qf.FlashError("firmware identity is not the exact qualified YWD or stock image")
+                    raise qf.FlashError("firmware identity not exact qualified YWD or allowlisted stock")
+        finally:
+            if progress:
+                progress("Restoring previously active modem services and verifying recovery", "recovery")
+
+        # The qualified context manager attempts restoration. Surface failures
+        # to the operator instead of incorrectly reporting full recovery.
+        not_running = [unit for unit in original_active if unit not in _active_modem_units()]
+        if not_running:
+            raise qf.FlashError("modem service recovery failed: " + ", ".join(not_running))
+        if progress:
+            progress("Previously active modem services restored; two-pass backup complete", "recovery")
         print("FWS_BACKUP=PASS")
         print("FWS_FLASH_WRITTEN=NO")
         print("FWS_OPTION_BYTES_WRITTEN=NO")
         print("FWS_RF_COMMAND_SENT_BY_WORKER=NO")
+        return {"verified": True, "kind": kind, "sha256": digest}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="FM1 two-pass firmware backup (root/TTY only)")
+    parser.add_argument("operation", choices=("backup",))
+    parser.parse_args()
+    try:
+        perform_backup(authorized_by_broker=False)
         return 0
-    except (qf.FlashError, qf.FirmwareProfileError, OSError, ValueError) as exc:
+    except (qf.FlashError, qf.FirmwareProfileError, OSError, ValueError,
+            subprocess.SubprocessError) as exc:
         print(f"FWS_BACKUP_ERROR={exc}", file=sys.stderr)
         return 20
 
