@@ -14,21 +14,32 @@
     <div class="brand"><span class="symbol">Y</span><div><strong>YWD<span class="light"> // </span>FWS</strong><small>FIRMWARE STUDIO</small></div></div>
     <div class="nav-label">WORKSPACE</div>
     <nav aria-label="Studio navigation"><span class="nav active">◈ &nbsp; Overview</span><span class="nav">▣ &nbsp; Firmware inventory <em>FM1</em></span><span class="nav">⇧ &nbsp; Flash &amp; restore <em>FM2</em></span><span class="nav">⌘ &nbsp; Stock builder <em>FM3</em></span></nav>
-    <div class="side-bottom"><div class="dot"></div><span>ON-DEMAND SESSION</span><small>FM0 · SAFE SHELL</small></div>
+    <div class="side-bottom"><div class="dot"></div><span>ON-DEMAND SESSION</span><small>FM1 · READ-ONLY</small></div>
   </aside>
   <main>
-    <header><div><small class="eyebrow">HARDWARE MANAGEMENT / DEVELOPMENT PREVIEW</small><h1>Firmware Studio <span class="version">FM0</span></h1><p class="lead">An isolated workspace for MMDVM_HS HAT maintenance.</p></div><button id="logout" class="ghost" hidden>Sign out</button></header>
-    <section class="banner"><span class="green-dot"></span><div><strong>Hardware operations are locked</strong><p>FM0 implements authentication and the interface shell only. No UART, GPIO, firmware flashing, or backups can be started from this build.</p></div><span class="safe-tag">NO HARDWARE ACCESS</span></section>
-    <div class="section-title"><h2>Operations</h2><span>Available in upcoming phases</span></div>
+    <header><div><small class="eyebrow">HARDWARE INVENTORY / DEVELOPMENT PREVIEW</small><h1>Firmware Studio <span class="version">FM1</span></h1><p class="lead">An isolated workspace for MMDVM_HS HAT maintenance.</p></div><button id="logout" class="ghost" hidden>Sign out</button></header>
+    <section class="banner"><span class="green-dot"></span><div><strong>Hardware operations are locked</strong><p>FM1 inventories qualified target metadata and verifies stored backups without interrupting the TNC. Capturing a new backup requires an interactive root maintenance command; firmware writes remain disabled.</p></div><span class="safe-tag">NO HARDWARE ACCESS</span></section>
+    <section class="inventory-pane" aria-label="Firmware inventory">
+      <div class="section-title inventory-header"><h2>Firmware Inventory</h2><button class="ghost" id="refresh-inventory" type="button" disabled>⟳ Refresh</button></div>
+      <p class="source-note" id="inventory-source">Sign in to load the qualified target profile and backup catalog.</p>
+      <div class="inventory-cards">
+        <div class="inventory-card"><small>QUALIFIED TARGET</small><strong id="hat-name">Not loaded</strong><span id="hat-spec">Reference profile, not live detected</span></div>
+        <div class="inventory-card"><small>RUNNING FIRMWARE</small><strong id="firmware-live">Not probed</strong><span>The modem UART remains with the running TNC</span></div>
+        <div class="inventory-card"><small>BACKUP CATALOG</small><strong id="backup-count">—</strong><span id="backup-access">Inventory not loaded</span></div>
+      </div>
+      <div class="backup-section"><div class="backup-top"><strong>Verified backup records</strong><span id="backup-explainer">Read-only metadata</span></div><div class="backup-list" id="backup-list"><div class="backup-empty">No data loaded</div></div></div>
+      <p class="source-note">New backups require the separately authorized maintenance worker. Firmware writes and browser-triggered hardware operations are not available in FM1.</p>
+    </section>
+    <div class="section-title"><h2>Operations</h2><span>Firmware writes planned for later phases</span></div>
     <section class="grid">
-      <article class="tile"><div class="tile-icon">▣</div><h3>Firmware Inventory</h3><p>Identify the target, report installed firmware and verify existing backups.</p><span class="phase">PLANNED · FM1</span></article>
-      <article class="tile"><div class="tile-icon">▤</div><h3>Backup Firmware</h3><p>Dual-read flash backup with SHA-256, manifests and protected storage.</p><span class="phase">PLANNED · FM1</span></article>
+      <article class="tile"><div class="tile-icon">▣</div><h3>Inventory</h3><p>Verified target profile and stored firmware backup catalog are shown above. No UART probing.</p><span class="phase">AVAILABLE · FM1</span></article>
+      <article class="tile"><div class="tile-icon">▤</div><h3>Backup Firmware</h3><p>Dual-read main-flash capture through an explicit root-only terminal worker. Never triggered by the browser.</p><span class="phase">CLI ONLY · FM1</span></article>
       <article class="tile"><div class="tile-icon">⇧</div><h3>Flash Qualified YWD</h3><p>Preflight, operator approval, STM32 programming and independent readback.</p><span class="phase">PLANNED · FM2</span></article>
       <article class="tile"><div class="tile-icon">↺</div><h3>Restore Backup</h3><p>Restore a compatible backup and safely handle an unbootable application.</p><span class="phase">PLANNED · FM2</span></article>
       <article class="tile"><div class="tile-icon">⌘</div><h3>Build Stock Firmware</h3><p>Build a pinned MMDVM_HS revision using the qualified board profile.</p><span class="phase">PLANNED · FM3</span></article>
       <article class="tile"><div class="tile-icon">◇</div><h3>Import Firmware</h3><p>Inspect provenance, image geometry and compatibility before any write.</p><span class="phase">PLANNED · FM3</span></article>
     </section>
-    <section class="console"><div class="console-head"><div><span class="live-dot"></span> SESSION CONSOLE</div><span id="session-state">LOCKED</span></div><div id="log" class="log" role="status" aria-live="polite"><div><span class="ts">FWS</span> Firmware Studio FM0 interface loaded</div><div><span class="ts">INFO</span> Hardware backend disabled by design</div></div><div class="console-foot">No hardware operations exist in this phase. Console events are local browser/UI events.</div></section>
+    <section class="console"><div class="console-head"><div><span class="live-dot"></span> SESSION CONSOLE</div><span id="session-state">LOCKED</span></div><div id="log" class="log" role="status" aria-live="polite"><div><span class="ts">FWS</span> Firmware Studio FM1 inventory interface loaded</div><div><span class="ts">INFO</span> Web server has no UART, GPIO or firmware-write capabilities</div></div><div class="console-foot">Inventory status is reported by the filesystem/broker. The console does not execute hardware commands.</div></section>
     <footer>YWD-MMDVM-TNC · Independent maintenance application · Default listener: 127.0.0.1:8090</footer>
   </main>
 </div>
