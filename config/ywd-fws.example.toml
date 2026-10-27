@@ -12,3 +12,9 @@ allow_private_bind = false
 [auth]
 password_file = "~/.config/ywd-fws/credentials.json"
 session_minutes = 30
+
+# Optional HTTPS for private-LAN testing (recommended instead of plaintext HTTP).
+# Generate a certificate covering the exact Pi LAN IP. Never commit private keys.
+# [tls]
+# cert_file = "/home/ywd/.config/ywd-fws/tls/server.crt"
+# key_file = "/home/ywd/.config/ywd-fws/tls/server.key"
