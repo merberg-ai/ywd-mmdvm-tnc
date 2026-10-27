@@ -13,18 +13,34 @@ import re
 from ywdtnc.firmware import FirmwareProfileError, load_profile, sha256_file, verify_stock_backup
 
 
-ROOT = Path(__file__).resolve().parents[2]
-PROFILE = ROOT / "firmware/product-ax25r4.json"
-TARGETS = ROOT / "firmware/targets.json"
+def _project_paths() -> tuple[Path, Path]:
+    """Find an actual source checkout, not the installed package's site-packages."""
+    candidates = (
+        Path.cwd(),
+        Path("/opt/ywd-mmdvm-tnc/source"),
+        Path(__file__).resolve().parents[2],
+    )
+    for root in candidates:
+        profile = root / "firmware/product-ax25r4.json"
+        targets = root / "firmware/targets.json"
+        if profile.is_file() and targets.is_file():
+            return profile, targets
+    raise FileNotFoundError("firmware manifests unavailable; launch from YWD-MMDVM-TNC source checkout")
+
+
 BACKUP_ROOTS = (Path("/var/lib/ywd-mmdvm-tnc/firmware-backups"),
                 Path("/var/lib/ywd-1278/firmware-backups"))
 SAFE_BACKUP_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,95}$")
 MAX_ENTRIES = 200
 
 
-def inventory(*, profile_path: Path = PROFILE, targets_path: Path = TARGETS,
+def inventory(*, profile_path: Path | None = None, targets_path: Path | None = None,
               backup_roots: tuple[Path, ...] = BACKUP_ROOTS) -> dict:
     """Describe qualified target and backup files WITHOUT probing a device."""
+    if profile_path is None or targets_path is None:
+        default_profile, default_targets = _project_paths()
+        profile_path = profile_path or default_profile
+        targets_path = targets_path or default_targets
     profile = load_profile(profile_path)
     target_data = json.loads(targets_path.read_text(encoding="utf-8"))
     matches = [x for x in target_data.get("targets", [])
