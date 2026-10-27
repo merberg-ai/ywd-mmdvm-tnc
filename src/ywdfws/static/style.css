@@ -18,3 +18,13 @@
 .backup-label{white-space:nowrap;font-size:9px;letter-spacing:.05em;padding:7px 8px;border-radius:6px;font-weight:800}
 .backup-label.good{background:#153e35;color:#86eed0}.backup-label.bad{background:#482f30;color:#f6aaa7}
 @media(max-width:690px){.inventory-pane{padding:14px}.inventory-cards{grid-template-columns:1fr}.backup-top{flex-direction:column}.backup-row{align-items:flex-start;flex-direction:column;gap:9px}.backup-label{white-space:normal}}
+
+/* FM1.5 read-only maintenance readiness */
+.preflight-pane{margin:28px 0;border:1px solid #2d5c62;border-radius:12px;background:linear-gradient(110deg,#10232d,#0b1b2b);padding:22px}
+.preflight-top{display:flex;align-items:center;justify-content:space-between;gap:22px}
+.preflight-top h2{font-size:18px;margin:8px 0}.preflight-top p{font-size:12px;color:#95b5c0;line-height:1.6;max-width:580px;margin:0}
+.preflight-button{width:auto;white-space:nowrap;margin:0;min-width:194px}.job-progress{margin-top:20px;border-top:1px solid #2b4954;padding-top:15px}
+.job-progress[hidden]{display:none}.progress-meta{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#c3dfdf;margin-bottom:9px}
+.job-progress progress{display:block;width:100%;height:11px;accent-color:#78edc9}
+.job-summary{margin-top:13px;font-size:12px;color:#a2c6c6;line-height:1.65}
+@media(max-width:690px){.preflight-pane{padding:16px}.preflight-top{flex-direction:column;align-items:stretch}.preflight-button{width:100%}}
