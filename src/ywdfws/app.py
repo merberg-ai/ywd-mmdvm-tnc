@@ -88,8 +88,9 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
     MAX_BODY = 2048
 
     def log_message(self, format: str, *args) -> None:
-        # Do not log request bodies, cookies, credentials, or URL tokens.
-        print("FWS_HTTP=" + format % args, file=sys.stderr)
+        # BaseHTTPRequestHandler normally logs the full request URI, which can
+        # contain sensitive query strings. FM0 logs no raw HTTP request data.
+        return
 
     def _respond(self, status: int, data: bytes, kind: str, cookie: str = "") -> None:
         self.send_response(status)
