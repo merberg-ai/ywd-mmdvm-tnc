@@ -58,7 +58,9 @@ class ReadonlyPreflightTests(unittest.TestCase):
                 if job["status"] != "running": break
                 time.sleep(.005)
         self.assertEqual(job["status"], "limited")
-        self.assertEqual(job["result"]["verified_golden_stock"], 0)
+        self.assertIsNone(job["result"]["verified_golden_stock"])
+        self.assertIsNone(job["result"]["backup_count"])
+        self.assertIn("counts are unknown", job["events"][-2]["message"])
         self.assertFalse(job["result"]["live_target_verified"])
 
     def test_only_one_concurrent_job(self):
