@@ -1,6 +1,6 @@
 """FM1 hardware-inert firmware inventory and verified backup catalog.
 
-No UART, GPIO, service control, bootloader or subprocess access.
+No UART, GPIO, service control, bootloader or external command execution.
 All inventory entries reflect stored manifests; none claim a live HAT probe.
 """
 from __future__ import annotations
