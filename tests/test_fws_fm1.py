@@ -62,6 +62,55 @@ class CatalogTests(unittest.TestCase):
             self.assertEqual(report["backups"][0]["integrity"], "invalid")
             self.assertFalse(report["backups"][0]["restore_qualified"])
 
+    def test_inaccessible_target_folder_reports_restricted_not_fatal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target_id = inventory(backup_roots=())["target"]["id"]
+            base = Path(tmp) / target_id
+            base.mkdir()
+            original = Path.iterdir
+
+            def protected_iterdir(path):
+                if path == base:
+                    raise PermissionError("root-owned backup catalog")
+                return original(path)
+
+            with patch.object(Path, "iterdir", protected_iterdir):
+                report = inventory(backup_roots=(Path(tmp),))
+            self.assertEqual(report["backup_access"], "restricted")
+            self.assertEqual(report["backup_count"], 0)
+            self.assertFalse(report["live_probe_performed"])
+
+    def test_permission_error_from_exists_is_not_http_503(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target_id = inventory(backup_roots=())["target"]["id"]
+            base = Path(tmp) / target_id
+            base.mkdir()
+            original = Path.exists
+
+            def protected_exists(path, *args, **kwargs):
+                if path == base:
+                    raise PermissionError("EACCES on protected target path")
+                return original(path, *args, **kwargs)
+
+            with patch.object(Path, "exists", protected_exists):
+                report = inventory(backup_roots=(Path(tmp),))
+            self.assertEqual(report["backup_access"], "restricted")
+            self.assertEqual(report["target"]["flash_size_bytes"], 131072)
+
+    def test_parent_backup_folder_permission_denied(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original = Path.is_dir
+
+            def protected_is_dir(path):
+                if path == root:
+                    raise PermissionError("EACCES on legacy backup parent")
+                return original(path)
+
+            with patch.object(Path, "is_dir", protected_is_dir):
+                report = inventory(backup_roots=(root,))
+            self.assertEqual(report["backup_access"], "restricted")
+
     def test_symlink_entry_is_not_followed(self):
         with tempfile.TemporaryDirectory() as tmp:
             prof = inventory(backup_roots=())["target"]
