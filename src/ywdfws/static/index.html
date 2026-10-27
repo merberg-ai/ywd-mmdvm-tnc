@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>YWD // Firmware Studio</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script defer src="/static/app.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="symbol">Y</span><div><strong>YWD<span class="light"> // </span>FWS</strong><small>FIRMWARE STUDIO</small></div></div>
+    <div class="nav-label">WORKSPACE</div>
+    <nav aria-label="Studio navigation"><span class="nav active">◈ &nbsp; Overview</span><span class="nav">▣ &nbsp; Firmware inventory <em>FM1</em></span><span class="nav">⇧ &nbsp; Flash &amp; restore <em>FM2</em></span><span class="nav">⌘ &nbsp; Stock builder <em>FM3</em></span></nav>
+    <div class="side-bottom"><div class="dot"></div><span>ON-DEMAND SESSION</span><small>FM0 · SAFE SHELL</small></div>
+  </aside>
+  <main>
+    <header><div><small class="eyebrow">HARDWARE MANAGEMENT / DEVELOPMENT PREVIEW</small><h1>Firmware Studio <span class="version">FM0</span></h1><p class="lead">An isolated workspace for MMDVM_HS HAT maintenance.</p></div><button id="logout" class="ghost" hidden>Sign out</button></header>
+    <section class="banner"><span class="green-dot"></span><div><strong>Hardware operations are locked</strong><p>FM0 implements authentication and the interface shell only. No UART, GPIO, firmware flashing, or backups can be started from this build.</p></div><span class="safe-tag">NO HARDWARE ACCESS</span></section>
+    <div class="section-title"><h2>Operations</h2><span>Available in upcoming phases</span></div>
+    <section class="grid">
+      <article class="tile"><div class="tile-icon">▣</div><h3>Firmware Inventory</h3><p>Identify the target, report installed firmware and verify existing backups.</p><span class="phase">PLANNED · FM1</span></article>
+      <article class="tile"><div class="tile-icon">▤</div><h3>Backup Firmware</h3><p>Dual-read flash backup with SHA-256, manifests and protected storage.</p><span class="phase">PLANNED · FM1</span></article>
+      <article class="tile"><div class="tile-icon">⇧</div><h3>Flash Qualified YWD</h3><p>Preflight, operator approval, STM32 programming and independent readback.</p><span class="phase">PLANNED · FM2</span></article>
+      <article class="tile"><div class="tile-icon">↺</div><h3>Restore Backup</h3><p>Restore a compatible backup and safely handle an unbootable application.</p><span class="phase">PLANNED · FM2</span></article>
+      <article class="tile"><div class="tile-icon">⌘</div><h3>Build Stock Firmware</h3><p>Build a pinned MMDVM_HS revision using the qualified board profile.</p><span class="phase">PLANNED · FM3</span></article>
+      <article class="tile"><div class="tile-icon">◇</div><h3>Import Firmware</h3><p>Inspect provenance, image geometry and compatibility before any write.</p><span class="phase">PLANNED · FM3</span></article>
+    </section>
+    <section class="console"><div class="console-head"><div><span class="live-dot"></span> SESSION CONSOLE</div><span id="session-state">LOCKED</span></div><div id="log" class="log" role="status" aria-live="polite"><div><span class="ts">FWS</span> Firmware Studio FM0 interface loaded</div><div><span class="ts">INFO</span> Hardware backend disabled by design</div></div><div class="console-foot">No hardware operations exist in this phase. Console events are local browser/UI events.</div></section>
+    <footer>YWD-MMDVM-TNC · Independent maintenance application · Default listener: 127.0.0.1:8090</footer>
+  </main>
+</div>
+<div class="veil" id="auth-overlay"><form id="auth-form" class="login-card" autocomplete="on">
+  <div class="login-icon">Y</div><small class="eyebrow">AUTHORIZED MAINTENANCE ONLY</small><h2>Firmware Studio</h2>
+  <p>Enter your local Firmware Studio password. Authentication never enables a firmware operation.</p>
+  <label for="password">Password</label><input id="password" name="password" type="password" required minlength="12" autocomplete="current-password" autofocus>
+  <button id="sign-in" type="submit" class="primary">Unlock Studio</button>
+  <div class="form-status" id="auth-status" role="status" aria-live="polite"></div>
+  <div class="security-note">Loopback-only HTTP. Use an SSH tunnel to connect from another device.</div>
+</form></div>
+</body>
+</html>
