@@ -16,6 +16,7 @@ import time
 
 from .config import StudioConfig, StudioConfigError, load, validate
 from .security import PasswordVerifier, SecurityError, initialize_interactive
+from .inventory import inventory
 
 
 @dataclass
@@ -166,12 +167,21 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
                 self._json(401, {"authenticated": False})
             else:
                 self._json(200, {"authenticated": True, "csrf": session.csrf})
+        elif self.path == "/api/inventory":
+            if self._session() is None:
+                self._json(401, {"error": "authentication required"})
+            else:
+                try:
+                    self._json(200, inventory())
+                except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+                    self._json(503, {"error": "inventory unavailable; check installed manifests"})
         elif self.path == "/api/status":
             if self._session() is None:
                 self._json(401, {"error": "authentication required"})
             else:
-                self._json(200, {"product": "YWD Firmware Studio", "phase": "FM0",
+                self._json(200, {"product": "YWD Firmware Studio", "phase": "FM1",
                                  "hardware_access": False, "firmware_operations": False,
+                                 "inventory_available": True,
                                  "flash_enabled": False, "stock_builder_enabled": False})
         else:
             self._json(404, {"error": "unknown endpoint"})
