@@ -22,6 +22,63 @@
     const result = await fetch(url, { credentials: "same-origin", cache: "no-store", ...options });
     return { ok: result.ok, code: result.status, body: await result.json() };
   }
+  const inventoryButton = document.getElementById("refresh-inventory");
+  const backups = document.getElementById("backup-list");
+  const set = (id, value) => { document.getElementById(id).textContent = value; };
+  async function loadInventory() {
+    inventoryButton.disabled = true;
+    set("inventory-source", "Reading qualified profile and stored backup records…");
+    try {
+      const result = await request("/api/inventory");
+      if (!result.ok) throw new Error("Inventory request failed (" + result.code + ")");
+      const data = result.body;
+      const hw = data.target;
+      set("hat-name", hw.mcu + " / " + hw.rf_chip);
+      set("hat-spec", hw.tcxo_mhz + " MHz TCXO · " + (hw.flash_size_bytes / 1024) + " KiB · " + hw.uart);
+      set("firmware-live", data.running_firmware.state === "not_probed" ? "Not probed" : "Unknown");
+      set("backup-count", String(data.backup_count));
+      const restricted = data.backup_access === "restricted";
+      set("backup-access", restricted ? "Root backup directory restricted" : "Catalog checked");
+      set("inventory-source", "Source: qualified on-disk hardware manifest; NOT a live HAT scan. Catalog: " +
+        (data.catalog_access || "local") + ".");
+      set("backup-explainer", restricted ? "Start the read-only root broker to view protected backups" :
+        "SHA-256 validated against on-disk manifest");
+      backups.replaceChildren();
+      if (!data.backups.length) {
+        const empty = document.createElement("div");
+        empty.className = "backup-empty";
+        empty.textContent = restricted ?
+          "Protected backup folders are not accessible to the web user. Start the local read-only inventory broker." :
+          "No matching backup records found in accessible storage.";
+        backups.appendChild(empty);
+      }
+      for (const entry of data.backups) {
+        const line = document.createElement("div");
+        line.className = "backup-row";
+        const main = document.createElement("div");
+        const name = document.createElement("strong");
+        name.textContent = entry.id;
+        const details = document.createElement("small");
+        const date = entry.captured_unix ? new Date(entry.captured_unix * 1000).toLocaleString() : "Date unknown";
+        details.textContent = date + " · " + (entry.captured_identity || "Identity unavailable");
+        main.append(name, details);
+        const label = document.createElement("span");
+        label.className = "backup-label " + (entry.integrity === "verified" ? "good" : "bad");
+        label.textContent = entry.integrity === "verified" ?
+          (entry.restore_qualified ? "GOLDEN STOCK · VERIFIED" : "CAPTURE · VERIFIED") : "INVALID / UNKNOWN";
+        line.append(main, label);
+        backups.appendChild(line);
+      }
+      message("FM1 inventory refreshed; " + data.backup_count + " catalog entries; live HAT probe not performed");
+    } catch (error) {
+      set("inventory-source", error.message);
+      message("Inventory unavailable: " + error.message);
+    } finally {
+      inventoryButton.disabled = false;
+    }
+  }
+  inventoryButton.addEventListener("click", loadInventory);
+
   async function refresh() {
     try {
       const result = await request("/api/session");
@@ -30,7 +87,8 @@
         overlay.hidden = true;
         logout.hidden = false;
         state.textContent = "AUTHENTICATED / FM0";
-        message("Authenticated browser session established; hardware access remains disabled");
+        message("Authenticated browser session established; firmware writes disabled");
+        await loadInventory();
       } else {
         csrf = "";
         overlay.hidden = false;
