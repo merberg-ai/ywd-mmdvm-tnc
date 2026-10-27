@@ -149,6 +149,7 @@ def perform_backup(*, progress=None, authorized_by_broker: bool = False) -> dict
             progress("Existing golden stock rollback verified; preparing modem service pause", "service_stop")
 
         original_active = _active_modem_units()
+        operation_error: Exception | None = None
         try:
             with qf.stopped_known_modem_owners(device, restore=True):
                 if progress:
@@ -168,15 +169,18 @@ def perform_backup(*, progress=None, authorized_by_broker: bool = False) -> dict
                         progress("Qualified stock backup passed two-pass hash verification", "verify")
                 else:
                     raise qf.FlashError("firmware identity not exact qualified YWD or allowlisted stock")
+        except Exception as exc:
+            operation_error = exc
         finally:
             if progress:
-                progress("Restoring previously active modem services and verifying recovery", "recovery")
-
-        # The qualified context manager attempts restoration. Surface failures
-        # to the operator instead of incorrectly reporting full recovery.
-        not_running = [unit for unit in original_active if unit not in _active_modem_units()]
-        if not_running:
-            raise qf.FlashError("modem service recovery failed: " + ", ".join(not_running))
+                progress("Checking restoration of previously active modem services", "recovery")
+            # Check even after a failed read or unknown identity. The
+            # qualified context manager already attempted service restart.
+            not_running = [unit for unit in original_active if unit not in _active_modem_units()]
+            if not_running:
+                raise qf.FlashError("modem service recovery failed: " + ", ".join(not_running)) from operation_error
+        if operation_error is not None:
+            raise operation_error
         if progress:
             progress("Previously active modem services restored; two-pass backup complete", "recovery")
         print("FWS_BACKUP=PASS")
