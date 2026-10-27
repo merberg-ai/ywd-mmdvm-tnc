@@ -1,0 +1,9 @@
+# Firmware Studio FM0. Separate from the passive packet-monitor WebUI.
+# On demand only. Never open a public or LAN listener without TLS/auth redesign.
+[web]
+listen = "127.0.0.1"
+port = 8090
+
+[auth]
+password_file = "~/.config/ywd-fws/credentials.json"
+session_minutes = 30
