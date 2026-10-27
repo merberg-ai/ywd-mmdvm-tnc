@@ -9,6 +9,83 @@
   const state = document.getElementById("session-state");
   const log = document.getElementById("log");
   let csrf = "";
+  let lastJob = null;
+  let pollTimer = null;
+  const preflightButton = document.getElementById("start-preflight");
+  const meter = document.getElementById("preflight-meter");
+  const progressBox = document.getElementById("job-progress");
+  const jobSummary = document.getElementById("job-summary");
+  const seenEvents = new Set();
+
+  function stopPolling() {
+    if (pollTimer !== null) clearTimeout(pollTimer);
+    pollTimer = null;
+  }
+  function renderJob(job) {
+    progressBox.hidden = false;
+    meter.value = job.steps_completed;
+    set("job-count", job.steps_completed + " / " + job.steps_total + " checks");
+    set("job-state", job.status === "running" ? "Checks in progress…" :
+        job.status === "complete" ? "Catalog preflight complete" :
+        job.status === "limited" ? "Catalog access restricted" : "Preflight failed");
+    for (const item of job.events) {
+      const key = job.id + ":" + item.seq;
+      if (!seenEvents.has(key)) {
+        seenEvents.add(key);
+        message("[PREFLIGHT] " + item.message);
+      }
+    }
+    if (job.result) {
+      jobSummary.textContent =
+        "Verified stock backups: " + job.result.verified_golden_stock + " · " +
+        "Catalog: " + job.result.catalog_source + ". " + job.result.next_action;
+    } else if (job.status === "failed") {
+      jobSummary.textContent = "Read-only checks failed. No HAT operation was performed.";
+    } else {
+      jobSummary.textContent = "Checking stored metadata only. No modem UART or GPIO access.";
+    }
+    preflightButton.disabled = job.status === "running";
+  }
+  async function pollJob(id) {
+    try {
+      const result = await request("/api/jobs/" + encodeURIComponent(id));
+      if (!result.ok) throw new Error("Preflight status unavailable");
+      if (lastJob !== id) return;
+      renderJob(result.body);
+      if (result.body.status === "running") {
+        pollTimer = setTimeout(() => pollJob(id), 650);
+      }
+    } catch (error) {
+      if (lastJob === id) {
+        jobSummary.textContent = "Preflight status unavailable; refresh the page or sign in again.";
+        preflightButton.disabled = false;
+      }
+    }
+  }
+  preflightButton.addEventListener("click", async () => {
+    if (!csrf) return;
+    preflightButton.disabled = true;
+    stopPolling();
+    seenEvents.clear();
+    progressBox.hidden = false;
+    meter.value = 0;
+    set("job-state", "Starting read-only preflight");
+    jobSummary.textContent = "Requesting only on-disk inventory checks.";
+    try {
+      const result = await request("/api/jobs/preflight", {
+        method: "POST",
+        headers: { "X-CSRF-Token": csrf },
+      });
+      if (!result.ok) throw new Error(result.body.error || "Preflight rejected");
+      lastJob = result.body.id;
+      renderJob(result.body);
+      await pollJob(lastJob);
+    } catch (error) {
+      jobSummary.textContent = error.message;
+      preflightButton.disabled = false;
+    }
+  });
+
 
   function message(text) {
     const line = document.createElement("div");
@@ -86,7 +163,8 @@
         csrf = result.body.csrf;
         overlay.hidden = true;
         logout.hidden = false;
-        state.textContent = "AUTHENTICATED / FM0";
+        state.textContent = "AUTHENTICATED / FM1.5";
+        preflightButton.disabled = false;
         message("Authenticated browser session established; firmware writes disabled");
         await loadInventory();
       } else {
@@ -94,6 +172,9 @@
         overlay.hidden = false;
         logout.hidden = true;
         state.textContent = "LOCKED";
+        stopPolling();
+        lastJob = null;
+        preflightButton.disabled = true;
       }
     } catch (_) {
       overlay.hidden = false;
@@ -128,6 +209,8 @@
       message("Session signed out");
     } finally {
       csrf = "";
+      stopPolling();
+      lastJob = null;
       await refresh();
       password.focus();
     }
