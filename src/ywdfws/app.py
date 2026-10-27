@@ -1,4 +1,4 @@
-"""On-demand FM0 web shell with gated private-LAN access; no firmware operations."""
+"""On-demand FM1 inventory UI with gated private-LAN access; no firmware writes."""
 from __future__ import annotations
 
 import argparse
@@ -91,7 +91,7 @@ class FirmwareStudioHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args) -> None:
         # BaseHTTPRequestHandler normally logs the full request URI, which can
-        # contain sensitive query strings. FM0 logs no raw HTTP request data.
+        # contain sensitive query strings. Studio logs no raw HTTP request data.
         return
 
     def _respond(self, status: int, data: bytes, kind: str, cookie: str = "") -> None:
@@ -237,7 +237,7 @@ def create_server(config: StudioConfig, verifier: PasswordVerifier) -> FirmwareS
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="On-demand YWD Firmware Studio FM0")
+    parser = argparse.ArgumentParser(description="On-demand YWD Firmware Studio FM1")
     parser.add_argument("--config", default="config/ywd-fws.example.toml")
     parser.add_argument("--listen", default=None,
                         help="override listener with an exact IPv4 address")
@@ -274,8 +274,8 @@ def main(argv: list[str] | None = None) -> int:
         if config.allow_private_bind and config.listen != "127.0.0.1":
             print("WARNING: HTTP on the LAN is unencrypted. WireGuard encrypts only its tunnel segment;")
             print("         restrict access to trusted clients. No firmware-write API exists in FM0.")
-        print(f"Firmware Studio FM0: http://{config.listen}:{server.server_port}/")
-        print("Read-only shell; no hardware operations. Stop with Ctrl-C.")
+        print(f"Firmware Studio FM1: http://{config.listen}:{server.server_port}/")
+        print("Read-only firmware inventory; no browser hardware operations. Stop with Ctrl-C.")
         try:
             server.serve_forever(poll_interval=0.25)
         except KeyboardInterrupt:
