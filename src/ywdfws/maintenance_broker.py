@@ -131,12 +131,13 @@ class BackupController:
             outcome = self.executor(progress)
             if not isinstance(outcome, dict) or outcome.get("verified") is not True:
                 raise MaintenanceError("two-pass verification result was not successful")
+            # Durably record success before reporting terminal completion.
+            self._audit("BACKUP_COMPLETED", kind=outcome["kind"], sha256=outcome["sha256"])
             with self.lock:
-                self.job["status"] = "completed"
                 self.job["backup_kind"] = outcome["kind"]
                 self.job["sha256"] = outcome["sha256"]
                 self._event("Two-pass main-flash backup verified", "complete")
-            self._audit("BACKUP_COMPLETED", kind=outcome["kind"], sha256=outcome["sha256"])
+                self.job["status"] = "completed"
         except Exception as exc:
             with self.lock:
                 self.job["status"] = "failed"
