@@ -3,6 +3,9 @@ from __future__ import annotations
 
 import http.client
 import json
+import ssl
+import shutil
+import subprocess
 from pathlib import Path
 import tempfile
 import threading
@@ -150,6 +153,69 @@ class HTTPJobTests(unittest.TestCase):
             self.assertEqual(self.request("POST", endpoint,
                             headers={"Origin": host, "Cookie": cookie,
                                      "X-CSRF-Token": csrf})[0], 404)
+
+
+class HTTPSIntegrationTests(unittest.TestCase):
+    def test_https_login_secure_cookie_and_strict_origin(self):
+        if not shutil.which("openssl"):
+            self.skipTest("openssl executable unavailable for temporary test certificate")
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            key, cert, password = d / "key.pem", d / "cert.pem", d / "password.json"
+            cmd = ["openssl", "req", "-x509", "-newkey", "rsa:2048",
+                   "-nodes", "-sha256", "-days", "1",
+                   "-subj", "/CN=127.0.0.1",
+                   "-addext", "subjectAltName=IP:127.0.0.1",
+                   "-keyout", str(key), "-out", str(cert)]
+            subprocess.run(cmd, check=True, capture_output=True, timeout=20)
+            key.chmod(0o600)
+            create_password_file(password, PASSWORD)
+            config = StudioConfig(port=0, tls_cert_file=cert, tls_key_file=key)
+            server = create_server(config, PasswordVerifier(password))
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            worker.start()
+            try:
+                conn = http.client.HTTPSConnection("127.0.0.1", server.server_port,
+                          timeout=3, context=ssl._create_unverified_context())
+                origin = f"https://127.0.0.1:{server.server_port}"
+                conn.request("POST", "/api/login", json.dumps({"password": PASSWORD}),
+                             {"Origin": origin, "Content-Type": "application/json"})
+                response = conn.getresponse()
+                data = json.loads(response.read())
+                self.assertEqual(response.status, 200)
+                self.assertTrue(data["authenticated"])
+                self.assertIn("Secure", response.getheader("Set-Cookie"))
+                conn.close()
+                conn = http.client.HTTPSConnection("127.0.0.1", server.server_port,
+                          timeout=3, context=ssl._create_unverified_context())
+                conn.request("POST", "/api/login", json.dumps({"password": PASSWORD}),
+                             {"Origin": f"http://127.0.0.1:{server.server_port}",
+                              "Content-Type": "application/json"})
+                response = conn.getresponse()
+                response.read()
+                self.assertEqual(response.status, 403)
+                conn.close()
+            finally:
+                server.shutdown()
+                server.server_close()
+                worker.join(timeout=2)
+
+    def test_world_readable_tls_key_rejected(self):
+        if not shutil.which("openssl"):
+            self.skipTest("openssl unavailable")
+        with tempfile.TemporaryDirectory() as tmp:
+            d = Path(tmp)
+            key, cert, password = d / "key.pem", d / "cert.pem", d / "password.json"
+            subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048",
+                            "-nodes", "-days", "1", "-subj", "/CN=127.0.0.1",
+                            "-keyout", str(key), "-out", str(cert)],
+                           check=True, capture_output=True, timeout=20)
+            key.chmod(0o644)
+            create_password_file(password, PASSWORD)
+            from ywdfws.security import SecurityError
+            with self.assertRaises(SecurityError):
+                create_server(StudioConfig(port=0, tls_cert_file=cert, tls_key_file=key),
+                              PasswordVerifier(password))
 
 
 class TLSConfigTests(unittest.TestCase):
