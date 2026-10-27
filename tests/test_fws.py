@@ -173,6 +173,20 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(code, 200)
         self.assertEqual(self.request("GET", "/api/session", headers={"Cookie": session})[0], 401)
 
+    def test_fm1_inventory_requires_login_and_never_claims_live_identity(self):
+        code, body, _ = self.request("GET", "/api/inventory")
+        self.assertEqual(code, 401)
+        code, body, headers = self.login()
+        self.assertEqual(code, 200)
+        session = headers["Set-Cookie"].split(";", 1)[0]
+        code, payload, _ = self.request("GET", "/api/inventory", headers={"Cookie": session})
+        self.assertEqual(code, 200)
+        self.assertEqual(payload["phase"], "FM1")
+        self.assertFalse(payload["live_probe_performed"])
+        self.assertEqual(payload["running_firmware"]["state"], "not_probed")
+        self.assertFalse(payload["capabilities"]["backup_browser"])
+        self.assertFalse(payload["capabilities"]["flash"])
+
     def test_no_hardware_or_mutating_endpoints(self):
         code, body, headers = self.login()
         self.assertEqual(code, 200)
