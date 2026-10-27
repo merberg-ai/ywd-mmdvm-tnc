@@ -26,6 +26,31 @@ class ConfigTests(unittest.TestCase):
             with self.subTest(host=host), self.assertRaises(StudioConfigError):
                 validate(StudioConfig(listen=host))
 
+    def test_explicit_rfc1918_lan_opt_in(self):
+        for host in ("10.0.0.1", "10.255.255.254", "172.16.0.1",
+                     "172.31.255.254", "192.168.1.11"):
+            with self.subTest(host=host):
+                cfg = validate(StudioConfig(listen=host, allow_private_bind=True))
+                self.assertTrue(cfg.allow_private_bind)
+        for host in ("0.0.0.0", "8.8.8.8", "1.1.1.1", "100.64.0.1",
+                     "169.254.1.5", "172.32.0.1", "255.255.255.255", "::1"):
+            with self.subTest(host=host), self.assertRaises(StudioConfigError):
+                validate(StudioConfig(listen=host, allow_private_bind=True))
+        with self.assertRaises(StudioConfigError):
+            validate(StudioConfig(listen="192.168.1.11", allow_private_bind="true"))
+
+    def test_toml_private_bind_requires_both_fields(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            p = Path(tmp) / "fws.toml"
+            p.write_text('[web]\nlisten="192.168.1.11"\nport=8090\n')
+            with self.assertRaises(StudioConfigError):
+                load(p)
+            p.write_text('[web]\nlisten="192.168.1.11"\nport=8090\nallow_private_bind=true\n')
+            self.assertEqual(load(p).listen, "192.168.1.11")
+            p.write_text('[web]\nlisten="0.0.0.0"\nallow_private_bind=true\n')
+            with self.assertRaises(StudioConfigError):
+                load(p)
+
     def test_reject_invalid_port_and_session_timeout(self):
         for port in (0, 65536, True, "8090"):
             with self.subTest(port=port), self.assertRaises(StudioConfigError):
