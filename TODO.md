@@ -8,6 +8,7 @@ modem firmware/runtime must remain untouched by passive WebUI release work.
 
 - [x] Passive schema-1 monitor, packet logger, and read-only WebUI passed recorded Pi/HAT physical gates (2026-09-10/11).
 - [x] Review the `main...dev-webui` diff and GitHub host CI (2026-10-27).
+- [ ] Harden guided installer upgrades: when `ywd-webui.service` was already active, stop it before replacing the installed package and restore that running state afterward without auto-enabling WebUI for other installations; add regression coverage.
 - [ ] Recheck the Raspberry Pi checkout and run all release gates as the normal checkout owner; fix local submodule/bytecode cache ownership before interpreting those failures as source regressions.
 - [ ] Verify deployed modem, packet logger, and WebUI stay healthy after the release candidate is installed; no unapproved RF transmit or firmware flashing.
 - [ ] Review final CI and only then fast-forward `main` from the approved candidate.
