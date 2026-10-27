@@ -22,10 +22,19 @@ class P1ToolingContractTests(unittest.TestCase):
             text = (ROOT / relative).read_text(encoding="utf-8")
             self.assertNotIn("qualified_flash.py", text)
             self.assertNotIn("firmware/flash.sh", text)
-            self.assertIsNone(
-                re.search(r"\bsystemctl\s+(?:start|restart|enable)\b", text),
-                msg=f"{relative} must not start/enable the modem service",
-            )
+            for match in re.finditer(r"\bsystemctl\s+(?:start|restart|enable)\b[^\n]*", text):
+                command = match.group(0).strip()
+                # Previously active, passive WebUI may be restarted during an
+                # upgrade; the low-level installer still may not start the
+                # modem, packet logger or a previously inactive WebUI.
+                if relative == "installer/install.sh":
+                    self.assertRegex(
+                        command,
+                        r"^systemctl (?:start|restart) ywd-webui\.service\b",
+                        msg=f"{relative} must not start RF/modem services: {command}",
+                    )
+                else:
+                    self.fail(f"{relative} must not start any services: {command}")
 
         install = (ROOT / "installer/install.sh").read_text(encoding="utf-8")
         self.assertNotIn("stm32flash", install)
