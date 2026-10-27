@@ -1,6 +1,6 @@
 # YWD Firmware Studio
 
-**Status:** FM1.5a development on dev-fws. Browser has inventory and a read-only preflight workflow, plus optional HTTPS. No browser-triggered hardware backup or firmware write.
+**Status:** FM1.5c development on dev-fws. One-time operator-authorized two-pass backup via an on-demand root broker is implemented and host-tested. Physical Pi/HAT acceptance remains pending. Flash/restore remain absent.
 
 Firmware Studio is a separate, on-demand web application. It is not the
 qualified, always-on, read-only packet monitor WebUI, and cannot transmit,
@@ -21,8 +21,9 @@ flash, query the modem UART, or control GPIO in FM0.
 - A separate, **operator-invoked root/TTY-only** backup worker can perform
   two 128 KiB readbacks using the existing qualified bootloader/GPIO
   control. It is never called through HTTP or the inventory broker.
-- No firmware flash/restore endpoint, general subprocess API, privileged
-  browser-to-worker action, or RF operation is implemented.
+- FM1.5c has a single-purpose root backup broker, separate from the inventory
+  broker. It only accepts a guarded BACKUP command. No firmware flash/restore,
+  upload, arbitrary subprocess or shell command endpoint exists.
 - A future privileged non-network broker will expose narrow allowlisted
   actions, independent authorization, exclusive locks, verified backups,
   hardware checks, deliberate approvals, progress and readback.
@@ -241,14 +242,13 @@ to the web user, so the count is **unknown**, never a trustworthy zero.
 Start the separate read-only inventory broker and refresh to confirm the
 verified golden-stock record through the HTTPS interface.
 
-Enabling an actual backup button requires another independent phase:
-hardened privileged action transport, deliberate per-operation approval,
-exclusive modem UART ownership, rollback/recovery and Pi physical
-acceptance. None of those capabilities is implicitly granted by HTTPS.
+FM1.5c provides the guarded backup form only when a root terminal worker
+is separately armed. A one-time code and typed operation confirmation
+are required, and physical acceptance is still pending.
 
-There is still no browser-triggered **physical** backup, flash, restore,
-root-side command, or privileged maintenance action. Those remain pending
-separate transport, service, worker authorization and Pi acceptance.
+The FM1.5a **preflight** remains strictly non-hardware. FM1.5c includes
+a separate manually armed root worker for a real dual-read hardware backup.
+It is not enabled by the preflight or by HTTPS alone.
 
 ### Optional HTTPS listener for the private LAN
 
@@ -292,6 +292,65 @@ encryption after the WireGuard exit. Prefer HTTPS for password/session
 confidentiality. Do NOT router-forward this endpoint. The FM1.5a
 read-only preflight is still not permission to perform a hardware backup.
 
+## FM1.5c: on-demand guarded hardware backup (host-qualified only)
+
+This new workflow is never armed by starting Firmware Studio. A separate
+root process allows exactly ONE backup operation, and cannot flash, upload,
+restore or execute arbitrary commands. It uses the fixed local socket
+/run/ywd-fws-maintenance.sock with mode 0600 and SO_PEERCRED authorization.
+
+Before a backup starts, all of the following are required:
+
+- HTTPS login/session with same-origin and CSRF protection. Plain HTTP
+  is rejected by the backend even with a valid password.
+- A separate root terminal explicitly starting the backup broker, which
+  prints a random, 10-minute, single-use operator approval code.
+- The exact typed confirmation READ-HAT-MAIN-FLASH. Five failed attempts
+  lock the broker authorization; restarting it issues a new code.
+- A pre-existing verified golden original stock backup, frozen target
+  identity and qualified support file provenance.
+- Exclusive maintenance operation lock, full STM32 bootloader MCU/version
+  check, two independently matching 131072-byte reads, and a verified
+  SHA-256 manifest. No option bytes or main flash writes.
+- Service ownership recovery: known active modem services are stopped
+  temporarily then restarted; prior active state is checked for recovery
+  even if the hardware read or probe fails.
+- A persistent root-only audit at
+  /var/lib/ywd-mmdvm-tnc/fws-maintenance-audit.jsonl. Codes and passwords
+  are not stored in the audit.
+
+### Physical Pi acceptance is NOT yet authorized
+
+**Do not start this maintenance broker merely to view the UI.** A valid
+request interrupts the packet station and resets the STM32, even though
+no flash writes occur. Wait for a deliberate physical qualification window.
+
+Once a physical test is authorized and the host gate passes, start the
+existing HTTPS web server as the normal ywd user. In a separate Pi
+terminal, as the operator:
+
+~~~sh
+cd ~/ywd-mmdvm-tnc
+sudo env PYTHONPATH="$PWD/src" \
+  python3 -m ywdfws.maintenance_broker --web-user ywd --enable-backup
+~~~
+
+The root terminal displays FWS_MAINTENANCE_BROKER=ARMED and a secret
+one-time approval code. Do not paste it into chat or logs. In the HTTPS
+Firmware Studio, use **Check worker** to expose the guarded backup form,
+enter that code and type READ-HAT-MAIN-FLASH exactly.
+
+The root broker performs one main-flash readback twice using the qualified
+hardware path; progress reports specific operations, not fake transfer
+percentages. Closing the browser does not abort a running job. The broker
+may not be used for a second operation. Close it manually with Ctrl+C
+after completion. A failure does not cause automatic reattempt; inspect
+the terminal, service status and HAT before touching it again.
+
+Self-signed HTTPS encrypts traffic but does not prove trusted server
+identity without separate certificate verification. The physical operator
+must validate their LAN/VPN trust assumptions before authorization.
+
 ## Security in FM0
 
 - Owner-only mode-0600 credentials and salted scrypt hash; no plaintext
@@ -313,9 +372,10 @@ read-only preflight is still not permission to perform a hardware backup.
 - FM1: reference inventory, verified backup catalog via read-only Unix broker,
   and separate operator-authorized dual-read stock/YWD backup CLI. The WebUI
   cannot trigger UART/backup, and future secure action transport remains TODO.
-- FM1.5a: optional HTTPS and authenticated, session-scoped read-only
-  backup-readiness preflight with real metadata stage events. Host-gated;
-  future browser authorization of actual hardware backups is not implemented.
+- FM1.5a: optional HTTPS and authenticated, read-only catalog preflight.
+- FM1.5c: root-terminal-approved, HTTPS-only dual-read backup with a narrow
+  Unix-socket broker, audit log and service recovery. Host-tested only;
+  physical Pi/HAT qualification remains TODO.
 - FM2: qualified YWD flashing and verified stock backup restore; physical
   target checks, recovery of unbootable firmware, readback verification,
   approval and safe daemon lifecycle.
