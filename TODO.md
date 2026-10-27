@@ -26,7 +26,9 @@ Full design and safe launch procedure: [Firmware Studio](docs/firmware-studio.md
   browser-only status console.
 - [x] FM0.4 Run host CI tests proving no firmware, modem, GPIO, shell or UART
   API is reachable from the browser.
-- [ ] FM0.5 Review the interface manually through an SSH tunnel on Pi without
+- [x] FM0.5 Add opt-in specific RFC1918 listener for VPN/LAN development
+  (public/wildcard binds prohibited; safe loopback default preserved).
+- [ ] FM0.6 Review the interface manually over PiVPN on the Pi without
   installing it as a service, and collect UX feedback.
 - [ ] FM1 Inventory/backup broker architecture, read-only preflight and
   permission separation.
