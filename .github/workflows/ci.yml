@@ -2,7 +2,7 @@ name: ywd-mmdvm-tnc-ci
 
 on:
   push:
-    branches: [main, dev, dev-webui, "firmware/**", "runtime/**", "checkpoint/**"]
+    branches: [main, dev, dev-webui, dev-fws, "firmware/**", "runtime/**", "checkpoint/**"]
   pull_request:
 
 permissions:
@@ -41,6 +41,9 @@ jobs:
 
       - name: Passive WebUI host contract
         run: bash scripts/check-webui.sh
+
+      - name: Firmware Studio FM0 security contract
+        run: bash scripts/check-fws.sh
 
       - name: Firmware updater safety contract
         run: bash scripts/check-firmware-update-tooling.sh
