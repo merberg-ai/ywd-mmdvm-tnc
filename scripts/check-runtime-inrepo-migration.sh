@@ -33,7 +33,11 @@ assert "ywdtnc*" in package_include
 assert "ywd1278*" in package_include
 # Additional product-side packages are permitted as long as the frozen qualified
 # ywd1278 closure above remains byte-identical. ywdweb is a passive observer.
-assert set(package_include) <= {"ywdtnc*", "ywd1278*", "ywdweb*"}
+assert set(package_include) <= {"ywdtnc*", "ywd1278*", "ywdweb*", "ywdfws*"}
+assert "ywdfws*" in package_include
+studio = (root/"src/ywdfws/app.py").read_text(encoding="utf-8")
+assert "firmware_operations" in studio and "flash_enabled" in studio
+assert not any(name in studio for name in ("stm32flash", "pinctrl", "subprocess", "ywd1278", "ywdtnc.engine"))
 assert f'__version__ = "{project_version}"' in (root/"src/ywdtnc/__init__.py").read_text(encoding="utf-8")
 installer=(root/"installer/install.sh").read_text(encoding="utf-8")
 assert '$2/vendor/ywd-1278' not in installer
@@ -51,6 +55,7 @@ print("FWM3_HAT_SUPPORT_BLOBS_EXACT=PASS")
 print("FWM3_FORBIDDEN_PRODUCT_LAYERS_ABSENT=PASS")
 print("FWM3_PRODUCT_PACKAGE_DISCOVERY=PASS")
 print("FWM3_PASSIVE_WEBUI_PACKAGE_ALLOWED=PASS")
+print("FWM3_ISOLATED_FWS_PACKAGE_ALLOWED=PASS")
 print("FWM3_INSTALLER_VENDOR_PIP_DEPENDENCY=ABSENT")
 print("FWM3_PROBE_SUPPORT_SOURCE=IN_REPO")
 print("FWM3_FLASH_SUPPORT_SOURCE=IN_REPO")
