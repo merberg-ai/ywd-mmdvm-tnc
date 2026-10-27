@@ -28,3 +28,13 @@
 .job-progress progress{display:block;width:100%;height:11px;accent-color:#78edc9}
 .job-summary{margin-top:13px;font-size:12px;color:#a2c6c6;line-height:1.65}
 @media(max-width:690px){.preflight-pane{padding:16px}.preflight-top{flex-direction:column;align-items:stretch}.preflight-button{width:100%}}
+
+/* FM1.5c privileged backup consent: intentional friction and mobile-friendly controls */
+.backup-auth-form{display:flex;flex-direction:column;gap:10px;margin-top:20px;border-top:1px solid #314c52;padding-top:18px}
+.backup-auth-form[hidden]{display:none}
+.backup-auth-form label{font-size:12px;font-weight:650;color:#c0dedd;line-height:1.6}
+.backup-auth-form input{background:#081826;border:1px solid #3b6472;color:#f1f7fc;
+  font:14px ui-monospace,monospace;width:100%;padding:13px;border-radius:8px;min-width:0}
+.backup-auth-form input:focus{outline:2px solid #5bdcc4;outline-offset:1px}
+.backup-auth-form button{margin-top:8px;white-space:normal;line-height:1.5}
+#backup-worker-state{font-weight:600}
