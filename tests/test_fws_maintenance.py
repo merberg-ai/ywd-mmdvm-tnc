@@ -190,8 +190,24 @@ class BrowserSecurityTests(unittest.TestCase):
             self.login()
             code, status = self.request("GET", "/api/maintenance/ready")
             self.assertEqual(code, 401)  # no session
-            # Even with a valid session cookie, HTTP is prohibited. This
-            # inspects the handler boundary instead of trusting the GUI label.
+            # Log in again to obtain a real session cookie and prove the
+            # transport gate rejects even a valid authenticated request.
+            conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=4)
+            origin = f"http://127.0.0.1:{self.port}"
+            conn.request("POST", "/api/login",
+                         body=json.dumps({"password": PASSWORD}),
+                         headers={"Origin": origin, "Content-Type": "application/json"})
+            response = conn.getresponse()
+            csrf = json.loads(response.read())["csrf"]
+            cookie = response.getheader("Set-Cookie").split(";")[0]
+            conn.close()
+            code, reply = self.request("POST", "/api/maintenance/backup",
+                payload=json.dumps({"authorization": "faked-code",
+                                    "confirmation": CONFIRM}),
+                headers={"Origin": origin, "Cookie": cookie,
+                         "X-CSRF-Token": csrf, "Content-Type": "application/json"})
+            self.assertEqual(code, 403)
+            self.assertIn("HTTPS required", reply["error"])
             self.assertFalse(root.called)
 
 
