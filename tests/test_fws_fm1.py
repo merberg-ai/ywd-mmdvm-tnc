@@ -205,6 +205,41 @@ class BackupWorkerTests(unittest.TestCase):
                 self.assertFalse((d / "read-a.bin").exists())
                 self.assertFalse((d / "read-b.bin").exists())
 
+    def test_failed_read_always_checks_modem_service_recovery(self):
+        from contextlib import contextmanager, nullcontext, ExitStack
+        from ywdtnc.firmware import load_profile
+        profile = load_profile(ROOT / "firmware/product-ax25r4.json")
+
+        @contextmanager
+        def fake_stopped_owners(device, *, restore):
+            self.assertTrue(restore)
+            yield
+
+        with ExitStack() as stack:
+            for owner, attr, value in (
+                (self.mod.qf, "require_root", lambda: None),
+                (self.mod.qf, "require_tools", lambda: None),
+                (self.mod.qf, "load_profile", lambda path: profile),
+                (self.mod.qf, "verify_core_pin", lambda expected: None),
+                (self.mod.qf, "load_target", lambda target: {}),
+                (self.mod.qf, "find_verified_stock_backup", lambda p: Path("/mock/golden")),
+                (self.mod.qf, "verify_stock_backup", lambda *a: None),
+                (self.mod, "exclusive_operation", lambda: nullcontext()),
+                (self.mod.qf, "stopped_known_modem_owners", fake_stopped_owners),
+                (self.mod.qf, "probe_identity", lambda *a: profile.expected_identity),
+            ):
+                stack.enter_context(patch.object(owner, attr, value))
+            stack.enter_context(patch.object(self.mod.Path, "exists", return_value=True))
+            active = stack.enter_context(patch.object(
+                self.mod, "_active_modem_units",
+                side_effect=[["ywd-mmdvm-tnc.service"], ["ywd-mmdvm-tnc.service"]]))
+            stack.enter_context(patch.object(
+                self.mod, "capture_current_firmware",
+                side_effect=self.mod.qf.FlashError("simulated read failure")))
+            with self.assertRaisesRegex(self.mod.qf.FlashError, "simulated read failure"):
+                self.mod.perform_backup(authorized_by_broker=True)
+            self.assertEqual(active.call_count, 2)
+
     def test_mismatching_read_rejected(self):
         from ywdtnc.firmware import load_profile
         profile = load_profile(ROOT / "firmware/product-ax25r4.json")
