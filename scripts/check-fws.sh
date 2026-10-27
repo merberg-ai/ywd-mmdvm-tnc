@@ -5,6 +5,7 @@ cd "$ROOT"
 
 PYTHONPATH="$ROOT/src" python3 -m unittest discover -s tests -p test_fws.py -v
 PYTHONPATH="$ROOT/src" python3 -m unittest discover -s tests -p test_fws_fm1.py -v
+PYTHONPATH="$ROOT/src" python3 -m unittest discover -s tests -p test_fws_jobs.py -v
 
 python3 - <<'PY'
 from pathlib import Path
@@ -35,6 +36,13 @@ for forbidden in ("subprocess", "systemctl", "stm32flash", "pinctrl", "serial.Se
     assert forbidden not in broker
 assert 'b"INVENTORY\\n"' in broker
 assert "SO_PEERCRED" in broker
+jobs = (root / "src/ywdfws/maintenance_jobs.py").read_text()
+assert '"READ_ONLY_PREFLIGHT"' in jobs
+assert "broker_inventory()" in jobs
+for forbidden in ("subprocess", "systemctl", "stm32flash", "pinctrl", "serial.Serial", "os.system", "os.exec"):
+    assert forbidden not in jobs, f"job layer must be hardware-inert: {forbidden}"
+assert '"/api/jobs/preflight"' in server
+assert '"X-CSRF-Token"' in server
 assert "READ-HAT-MAIN-FLASH" in worker
 assert 'restore=True' in worker
 assert '"-r"' in worker and '"-w"' not in worker
@@ -44,6 +52,7 @@ print("FWS_FM1_DUAL_READ_WORKER_HOST_CONTRACT=PASS")
 PY
 echo FWS_FM0_HOST_GATE=PASS
 echo FWS_FM1_HOST_GATE=PASS
+echo FWS_FM1_5_PREFLIGHT_GATE=PASS
 echo MODEM_UART_OPENED=NO
 echo GPIO_ACCESSED=NO
 echo FLASH_WRITTEN=NO
