@@ -1,8 +1,8 @@
-"""On-demand, loopback-only FM0 web shell. NO hardware or firmware operations."""
+"""On-demand FM0 web shell with gated private-LAN access; no firmware operations."""
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from importlib.resources import files
@@ -14,7 +14,7 @@ import sys
 import threading
 import time
 
-from .config import StudioConfig, StudioConfigError, load
+from .config import StudioConfig, StudioConfigError, load, validate
 from .security import PasswordVerifier, SecurityError, initialize_interactive
 
 
@@ -223,12 +223,24 @@ def create_server(config: StudioConfig, verifier: PasswordVerifier) -> FirmwareS
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="On-demand YWD Firmware Studio FM0")
     parser.add_argument("--config", default="config/ywd-fws.example.toml")
+    parser.add_argument("--listen", default=None,
+                        help="override listener with an exact IPv4 address")
+    parser.add_argument("--port", type=int, default=None,
+                        help="override HTTP port")
+    parser.add_argument("--allow-private-bind", action="store_true",
+                        help="explicitly authorize RFC1918 private LAN listener for VPN testing")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--init-password", action="store_true")
     group.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     try:
         config = load(args.config)
+        config = validate(replace(
+            config,
+            listen=args.listen if args.listen is not None else config.listen,
+            port=args.port if args.port is not None else config.port,
+            allow_private_bind=config.allow_private_bind or args.allow_private_bind,
+        ))
         if os.geteuid() == 0:
             raise SecurityError("Do not run the web server or password setup as root")
         if args.init_password:
@@ -243,6 +255,9 @@ def main(argv: list[str] | None = None) -> int:
             print("FWS_FLASH_ENABLED=NO")
             return 0
         server = create_server(config, verifier)
+        if config.allow_private_bind and config.listen != "127.0.0.1":
+            print("WARNING: HTTP on the LAN is unencrypted. WireGuard encrypts only its tunnel segment;")
+            print("         restrict access to trusted clients. No firmware-write API exists in FM0.")
         print(f"Firmware Studio FM0: http://{config.listen}:{server.server_port}/")
         print("Read-only shell; no hardware operations. Stop with Ctrl-C.")
         try:
